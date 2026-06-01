@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>heatWave — Heat Sheet Generator</title>
+  <style>
+    /* ====== RESET & VARIABLES ====== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1c25;
+      --card:     #22252f;
+      --border:   #2e3140;
+      --text:     #e4e6f0;
+      --text-dim: #8b8fa3;
+      --accent:   #3b82f6;
+      --accent2:  #06b6d4;
+      --success:  #22c55e;
+      --warning:  #f59e0b;
+      --error:    #ef4444;
+      --gradient: linear-gradient(135deg, var(--accent), var(--accent2));
+      --radius:   12px;
+      --shadow:   0 4px 24px rgba(0,0,0,.35);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ====== HEADER ====== */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .header-logo {
+      font-size: 1.6em;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .header-sub {
+      color: var(--text-dim);
+      font-size: .85em;
+      border-left: 1px solid var(--border);
+      padding-left: 14px;
+    }
+
+    /* ====== LAYOUT ====== */
+    .container { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+
+    /* ====== STEPS BAR ====== */
+    .steps {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 28px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 6px;
+      border: 1px solid var(--border);
+    }
+    .step-btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      background: transparent;
+      color: var(--text-dim);
+      font-size: .88em;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all .2s;
+    }
+    .step-btn.active {
+      background: var(--gradient);
+      color: #fff;
+      box-shadow: 0 2px 12px rgba(59,130,246,.35);
+    }
+    .step-btn:hover:not(.active) { background: var(--card); color: var(--text); }
+    .step-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ====== PANELS ====== */
+    .panel { display: none; animation: fadeIn .25s ease; }
+    .panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ====== CARD ====== */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+    .card h2 {
+      font-size: 1.15em;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ====== DROP ZONE ====== */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .25s;
+      background: rgba(59,130,246,.04);
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: rgba(59,130,246,.1);
+    }
+    .drop-zone .icon { font-size: 2.8em; margin-bottom: 12px; }
+    .drop-zone p { color: var(--text-dim); margin-top: 6px; font-size: .88em; }
+    .drop-zone input[type=file] { display: none; }
+
+    /* ====== BUTTONS ====== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 22px;
+      border: none;
+      border-radius: 8px;
+      font-size: .9em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-primary { background: var(--gradient); color: #fff; }
+    .btn-primary:hover { box-shadow: 0 4px 16px rgba(59,130,246,.4); transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-success:hover { box-shadow: 0 4px 16px rgba(34,197,94,.35); }
+
+    /* ====== METRICS ROW ====== */
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 16px 0; }
+    .metric {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+    .metric-value {
+      font-size: 1.6em;
+      font-weight: 700;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .metric-label { font-size: .78em; color: var(--text-dim); margin-top: 4px; }
+
+    /* ====== TABLE ====== */
+    .event-list { width: 100%; border-collapse: collapse; margin-top: 14px; }
+    .event-list th, .event-list td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+    .event-list th { color: var(--text-dim); font-size: .78em; text-transform: uppercase; letter-spacing: .5px; }
+    .event-list tr:hover td { background: rgba(59,130,246,.06); }
+
+    /* ====== FORM ROW ====== */
+    .form-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+    .form-group { flex: 1; min-width: 200px; }
+    .form-group label { display: block; font-size: .82em; color: var(--text-dim); margin-bottom: 6px; font-weight: 600; }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: .9em;
+      transition: border-color .2s;
+    }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
+
+    /* ====== TOAST ====== */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 14px 22px;
+      border-radius: 10px;
+      color: #fff;
+      font-weight: 600;
+      font-size: .88em;
+      z-index: 9999;
+      animation: slideUp .3s ease;
+      box-shadow: var(--shadow);
+    }
+    .toast.success { background: var(--success); }
+    .toast.error   { background: var(--error); }
+    .toast.info    { background: var(--accent); }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } }
+
+    /* ====== SPINNER ====== */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ====== PROGRESS BAR ====== */
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: var(--card);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 12px 0;
+    }
+    .progress-bar .fill {
+      height: 100%;
+      background: var(--gradient);
+      border-radius: 3px;
+      transition: width .4s ease;
+    }
+
+    /* ====== DOWNLOAD GRID ====== */
+    .download-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 14px; }
+
+    /* ====== FOOTER ====== */
+    .footer { text-align: center; color: var(--text-dim); font-size: .78em; padding: 24px 0 16px; }
+
+    /* ====== EMPTY STATE ====== */
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-dim); }
+    .empty-state .icon { font-size: 2.5em; margin-bottom: 12px; opacity: .5; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-logo">🏊 heatWave</div>
+  <div class="header-sub">Psych Sheet → Heat Sheet Converter</div>
+</div>
+
+<div class="container">
+
+  <!-- STEP NAV -->
+  <div class="steps">
+    <button class="step-btn active" onclick="showPanel('upload')" id="tab-upload">📤 Upload</button>
+    <button class="step-btn" onclick="showPanel('preview')" id="tab-preview" disabled>👀 Preview</button>
+    <button class="step-btn" onclick="showPanel('settings')" id="tab-settings" disabled>⚙️ Settings</button>
+    <button class="step-btn" onclick="showPanel('generate')" id="tab-generate" disabled>📄 Generate</button>
+  </div>
+
+  <!-- ===== UPLOAD PANEL ===== -->
+  <div class="panel active" id="panel-upload">
+    <div class="card">
+      <h2>📤 Upload Psych Sheet</h2>
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="icon">📂</div>
+        <div><strong>Click or drag-and-drop</strong> your USA Swimming psych sheet PDF</div>
+        <p>Supports standard two-column psych sheet layouts</p>
+        <input type="file" id="fileInput" accept=".pdf">
+      </div>
+      <div id="uploadStatus" style="margin-top:16px"></div>
+    </div>
+  </div>
+
+  <!-- ===== PREVIEW PANEL ===== -->
+  <div class="panel" id="panel-preview">
+    <div class="card">
+      <h2>👀 Event Preview</h2>
+      <div id="previewMetrics" class="metrics"></div>
+      <table class="event-list" id="eventTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Event</th>
+            <th>Gender</th>
+            <th>Distance</th>
+            <th>Stroke</th>
+            <th>Entries</th>
+          </tr>
+        </thead>
+        <tbody id="eventTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== SETTINGS PANEL ===== -->
+  <div class="panel" id="panel-settings">
+    <div class="card">
+      <h2>⚙️ Heat Sheet Settings</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Meet Title</label>
+          <input type="text" id="meetTitle" value="Swimming Meet" placeholder="e.g. Regionals 2026">
+        </div>
+        <div class="form-group">
+          <label>Meet Date</label>
+          <input type="text" id="meetDate" placeholder="MM/DD/YYYY">
+        </div>
+        <div class="form-group">
+          <label>Number of Lanes</label>
+          <select id="numLanes">
+            <option value="4">4 Lanes</option>
+            <option value="6">6 Lanes</option>
+            <option value="8" selected>8 Lanes</option>
+            <option value="10">10 Lanes</option>
+          </select>
+        </div>
+      </div>
+      <p style="color:var(--text-dim); font-size:.85em;">Seeding follows USA Swimming prelim rules (fastest-to-slowest heat order, center-out lane assignment).</p>
+    </div>
+  </div>
+
+  <!-- ===== GENERATE PANEL ===== -->
+  <div class="panel" id="panel-generate">
+    <div class="card">
+      <h2>📄 Generate Heat Sheets</h2>
+      <div id="genConfig" style="margin-bottom:16px; color:var(--text-dim); font-size:.9em;"></div>
+      <button class="btn btn-primary" id="generateBtn" onclick="doGenerate()">
+        🚀 Generate Heat Sheets
+      </button>
+      <div id="genProgress" style="margin-top:16px; display:none;">
+        <div class="progress-bar"><div class="fill" id="genFill" style="width:0%"></div></div>
+        <div style="font-size:.82em; color:var(--text-dim);">Seeding events and generating PDFs…</div>
+      </div>
+      <div id="genResults" style="margin-top:20px"></div>
+    </div>
+    <div class="card" id="downloadCard" style="display:none">
+      <h2>📥 Download</h2>
+      <button class="btn btn-success" onclick="downloadFull()" style="margin-bottom:14px;">
+        📄 Download Full Meet PDF
+      </button>
+      <div id="individualDownloads" class="download-grid"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    🏊 heatWave — Made for USA Swimming coaches
+  </div>
+</div>
+
+<script>
+/* ====== STATE ====== */
+let parsedEvents = null;
+let generatedEvents = null;
+
+/* ====== PANEL NAV ====== */
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.step-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+function enableTabs(...names) {
+  names.forEach(n => { document.getElementById('tab-' + n).disabled = false; });
+}
+
+/* ====== TOAST ====== */
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+/* ====== DATE DEFAULT ====== */
+(function() {
+  const d = new Date();
+  document.getElementById('meetDate').value =
+    String(d.getMonth()+1).padStart(2,'0') + '/' +
+    String(d.getDate()).padStart(2,'0') + '/' +
+    d.getFullYear();
+})();
+
+/* ====== DRAG & DROP ====== */
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+['dragenter','dragover'].forEach(evt => {
+  dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+});
+['dragleave','drop'].forEach(evt => {
+  dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.remove('drag-over'); });
+});
+dropZone.addEventListener('drop', e => {
+  const files = e.dataTransfer.files;
+  if (files.length) uploadFile(files[0]);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files.length) uploadFile(e.target.files[0]);
+});
+
+/* ====== UPLOAD ====== */
+async function uploadFile(file) {
+  if (!file.name.toLowerCase().endsWith('.pdf')) {
+    toast('Please upload a PDF file', 'error');
+    return;
+  }
+
+  const status = document.getElementById('uploadStatus');
+  status.innerHTML = `<div style="display:flex;align-items:center;gap:8px;"><span class="spinner"></span> Parsing <strong>${file.name}</strong>…</div>`;
+
+  const form = new FormData();
+  form.append('file', file);
+
+  try {
+    const res = await fetch('/api/upload', { method: 'POST', body: form });
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      status.innerHTML = `<div style="color:var(--error);">❌ ${data.error || 'Upload failed'}</div>`;
+      toast('Parse error', 'error');
+      return;
+    }
+
+    parsedEvents = data;
+    status.innerHTML = `<div style="color:var(--success);">✅ Parsed <strong>${data.event_count}</strong> events and <strong>${data.total_entries}</strong> entries from <strong>${data.filename}</strong></div>`;
+    toast('PDF parsed successfully!', 'success');
+
+    enableTabs('preview', 'settings', 'generate');
+    renderPreview(data);
+    showPanel('preview');
+
+  } catch (err) {
+    status.innerHTML = `<div style="color:var(--error);">❌ Network error: ${err.message}</div>`;
+    toast('Connection error', 'error');
+  }
+}
+
+/* ====== PREVIEW ====== */
+function renderPreview(data) {
+  const metricsDiv = document.getElementById('previewMetrics');
+  const relayCount = data.events.filter(e => e.sample_entries.length && e.sample_entries[0].type === 'relay').length;
+  const indivCount = data.event_count - relayCount;
+
+  metricsDiv.innerHTML = `
+    <div class="metric"><div class="metric-value">${data.event_count}</div><div class="metric-label">Total Events</div></div>
+    <div class="metric"><div class="metric-value">${indivCount}</div><div class="metric-label">Individual</div></div>
+    <div class="metric"><div class="metric-value">${relayCount}</div><div class="metric-label">Relay</div></div>
+    <div class="metric"><div class="metric-value">${data.total_entries}</div><div class="metric-label">Total Entries</div></div>
+  `;
+
+  const tbody = document.getElementById('eventTableBody');
+  tbody.innerHTML = data.events.map(e => `
+    <tr>
+      <td>${e.number}</td>
+      <td>${e.name}</td>
+      <td>${e.gender}</td>
+      <td>${e.distance}Y</td>
+      <td>${e.stroke}</td>
+      <td>${e.entry_count}</td>
+    </tr>
+  `).join('');
+}
+
+/* ====== GENERATE ====== */
+async function doGenerate() {
+  if (!parsedEvents) { toast('Upload a PDF first', 'error'); return; }
+
+  const btn = document.getElementById('generateBtn');
+  const progress = document.getElementById('genProgress');
+  const results = document.getElementById('genResults');
+  const fill = document.getElementById('genFill');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generating…';
+  progress.style.display = 'block';
+  fill.style.width = '30%';
+
+  const lanes = document.getElementById('numLanes').value;
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lanes: parseInt(lanes) }),
+    });
+    const data = await res.json();
+    fill.style.width = '100%';
+
+    if (!res.ok || data.error) {
+      results.innerHTML = `<div style="color:var(--error);">❌ ${data.error}</div>`;
+      toast('Generation failed', 'error');
+      return;
+    }
+
+    generatedEvents = data;
+
+    // Show results
+    const avgPerHeat = data.total_heats > 0 ? (data.total_entries / data.total_heats).toFixed(1) : 0;
+    results.innerHTML = `
+      <div class="metrics">
+        <div class="metric"><div class="metric-value">${data.total_heats}</div><div class="metric-label">Total Heats</div></div>
+        <div class="metric"><div class="metric-value">${data.total_entries}</div><div class="metric-label">Assigned</div></div>
+        <div class="metric"><div class="metric-value">${avgPerHeat}</div><div class="metric-label">Avg/Heat</div></div>
+        <div class="metric"><div class="metric-value">${data.events.length}</div><div class="metric-label">Events</div></div>
+      </div>
+    `;
+
+    // Show downloads
+    const dlCard = document.getElementById('downloadCard');
+    dlCard.style.display = 'block';
+
+    const indivDiv = document.getElementById('individualDownloads');
+    indivDiv.innerHTML = data.events.map(e =>
+      `<button class="btn btn-secondary" onclick="downloadEvent(${e.event_number})">
+         Event ${e.event_number} (${e.heats}h)
+       </button>`
+    ).join('');
+
+    toast('Heat sheets generated!', 'success');
+
+  } catch (err) {
+    results.innerHTML = `<div style="color:var(--error);">❌ ${err.message}</div>`;
+    toast('Error generating', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🚀 Generate Heat Sheets';
+    setTimeout(() => { progress.style.display = 'none'; fill.style.width = '0%'; }, 1500);
+  }
+}
+
+/* ====== DOWNLOAD ====== */
+function downloadFull() {
+  const title = encodeURIComponent(document.getElementById('meetTitle').value);
+  const date  = encodeURIComponent(document.getElementById('meetDate').value);
+  window.location.href = `/api/download/full?title=${title}&date=${date}`;
+}
+
+function downloadEvent(num) {
+  const title = encodeURIComponent(document.getElementById('meetTitle').value);
+  const date  = encodeURIComponent(document.getElementById('meetDate').value);
+  window.location.href = `/api/download/event/${num}?title=${title}&date=${date}`;
+}
+
+/* ====== GENERATE TAB CONFIG DISPLAY ====== */
+document.getElementById('tab-generate').addEventListener('click', () => {
+  const title = document.getElementById('meetTitle').value;
+  const date  = document.getElementById('meetDate').value;
+  const lanes = document.getElementById('numLanes').value;
+  const evtCount = parsedEvents ? parsedEvents.event_count : 0;
+  const entryCount = parsedEvents ? parsedEvents.total_entries : 0;
+  document.getElementById('genConfig').innerHTML = `
+    <strong>Meet:</strong> ${title} &nbsp;|&nbsp;
+    <strong>Date:</strong> ${date} &nbsp;|&nbsp;
+    <strong>Lanes:</strong> ${lanes} &nbsp;|&nbsp;
+    <strong>Events:</strong> ${evtCount} &nbsp;|&nbsp;
+    <strong>Entries:</strong> ${entryCount}
+  `;
+});
+</script>
+
+</body>
+</html>
