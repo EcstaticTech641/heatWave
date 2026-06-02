@@ -8,7 +8,7 @@
 
 ### Option 1: Download heatWave.exe (Recommended)
 
-1. **Download** the `dist/heatWave/` folder (or the Inno Setup installer)
+1. **Download** the latest release here `https://github.com/EcstaticTech641/heatWave/releases` (portable or setup.exe)
 2. **Double-click** `heatWave.exe` to launch
 3. **A native desktop window opens** — no browser needed, no Python required!
 4. **Use the app** — upload your psych sheet and generate heat sheets in seconds
@@ -58,7 +58,7 @@ The app opens in a native `pywebview` desktop window powered by Streamlit.
 
 ### Example
 ```
-Input:  Oklahoma Swimming 10-Under Championship psych sheet
+Input:  State Swimming 10-Under Championship psych sheet
         78.3 KB, 28 events, 702 swimmers
 
 Processing: < 5 seconds
