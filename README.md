@@ -4,8 +4,6 @@
 
 **heatWave** is a tool that transforms USA Swimming psych sheets (entry lists) into professionally formatted heat sheets for meet operations. It eliminates hours of manual work by automating the extraction, parsing, seeding, and PDF generation workflow.
 
-**Status:** ✅ **COMPLETE & PRODUCTION READY**
-
 ---
 
 ## 🚀 Quick Start (For Coaches)
