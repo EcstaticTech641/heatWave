@@ -46,7 +46,7 @@
 ## Modified Files (2 files)
 
 ### Code
-1. **`run_streamlit.py`** - Enhanced launcher
+1. **`run_desktop.py`** - Enhanced launcher
    - Now opens browser automatically
    - Detects .exe vs. Python mode
    - Better startup messages
@@ -80,7 +80,7 @@ These files were created in Phase 1 and work seamlessly with .exe packaging:
 
 ## Total Files Changed/Created
 - **6 new files** (4 documentation, 2 build/test scripts)
-- **2 modified files** (run_streamlit.py, README.md)
+- **2 modified files** (run_desktop.py, README.md)
 - **3 existing files** (from Phase 1, already set up)
 
 ---
@@ -121,7 +121,7 @@ heatWave/
 ### For Developers (Python environment)
 ```
 cd heatWave
-python run_streamlit.py
+python run_desktop.py
 ```
 → Starts Streamlit directly in Python
 
@@ -178,7 +178,7 @@ The PyInstaller spec bundles:
 | **Docker** | 10 min | Install Docker Desktop, pull image | 500 MB | Moderate |
 | **.exe (NEW)** | 1 min | Download and double-click | 200 MB | Zero |
 
-**Winner for coaches: .exe method** ✨
+**Winner for coaches: .exe method** 
 
 ---
 
@@ -210,7 +210,7 @@ Compress-Archive -Path dist\heatWave -DestinationPath heatWave.zip
 
 ---
 
-## You're All Set! ✅
+## You're All Set! 
 
 All files are created, tested, and documented. The .exe packaging is ready to build.
 

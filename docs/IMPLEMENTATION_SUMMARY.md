@@ -6,7 +6,7 @@ The heatWave project has successfully implemented the complete text-to-heat-shee
 
 ---
 
-## 📊 What's Been Built
+##  What's Been Built
 
 ### 1. **PDF Text Extraction** ✓
 - **Module:** `src/parser/extractor.py`  
@@ -60,7 +60,7 @@ The heatWave project has successfully implemented the complete text-to-heat-shee
 
 ---
 
-## 📈 Test Results
+##  Test Results
 
 ### Integration Test (All Components)
 ```
@@ -77,16 +77,16 @@ Output: 189.9 KB PDFs
 ```
 
 ### Quality Metrics
-- ✅ All 702 entries assigned exactly once
-- ✅ No duplicate or missing assignments
-- ✅ Lane distribution valid (1-8 per heat)
-- ✅ USA Swimming seeding rules applied correctly
-- ✅ Heat distribution optimal (7.0 avg entries/heat)
-- ✅ PDFs printable and coach-ready
+-  All 702 entries assigned exactly once
+-  No duplicate or missing assignments
+-  Lane distribution valid (1-8 per heat)
+-  USA Swimming seeding rules applied correctly
+-  Heat distribution optimal (7.0 avg entries/heat)
+-  PDFs printable and coach-ready
 
 ---
 
-## 🗂️ Project Structure
+##  Project Structure
 
 ```
 heatWave/
@@ -110,7 +110,7 @@ heatWave/
 
 ---
 
-## 🚀 How to Use the Pipeline
+##  How to Use the Pipeline
 
 ### Basic Usage
 ```python
@@ -150,9 +150,9 @@ python test_integration.py
 
 ---
 
-## 📋 Current Capabilities
+##  Current Capabilities
 
-✅ **Supports:**
+ **Supports:**
 - USA Swimming psych sheets (standard formats)
 - Two-column layout PDFs
 - Both relay and individual events
@@ -160,7 +160,7 @@ python test_integration.py
 - Professional PDF output
 - Batch processing of multiple events
 
-✅ **Handles:**
+ **Handles:**
 - 702+ entries per meet
 - NT (no time) entries
 - Duplicate team entries (A, B, C teams)
@@ -169,7 +169,7 @@ python test_integration.py
 
 ---
 
-## 🎯 Next Steps (Post-MVP)
+##  Next Steps (Post-MVP)
 
 ### Phase 1: UI Implementation
 - [ ] Streamlit interface for web/desktop
@@ -191,7 +191,7 @@ python test_integration.py
 
 ---
 
-## 📦 Dependencies
+##  Dependencies
 
 Core requirements installed and tested:
 - `pdfplumber` - PDF text extraction
@@ -206,7 +206,7 @@ Optional (for future phases):
 
 ---
 
-## ✨ Architecture Highlights
+##  Architecture Highlights
 
 ### Modular Design
 - **Extraction Layer** - PDF → raw text
@@ -228,7 +228,7 @@ Optional (for future phases):
 
 ---
 
-## 📊 Performance
+##  Performance
 
 - **Processing Speed:** Complete 28-event meet in <5 seconds
 - **Output Quality:** Professional, print-ready PDFs
@@ -237,7 +237,7 @@ Optional (for future phases):
 
 ---
 
-## 🎓 Learning Resources
+##  Learning Resources
 
 The code includes:
 - **Inline documentation** - Function docstrings explain purpose and usage
@@ -247,18 +247,18 @@ The code includes:
 
 ---
 
-## 🔐 Quality Assurance
+##  Quality Assurance
 
 All components have been:
-- ✅ Unit tested individually
-- ✅ Integration tested end-to-end
-- ✅ Validated with real meet data
-- ✅ Verified for correctness
-- ✅ Tested for edge cases
+-  Unit tested individually
+-  Integration tested end-to-end
+-  Validated with real meet data
+-  Verified for correctness
+-  Tested for edge cases
 
 ---
 
-## 📝 Next Immediate Step
+##  Next Immediate Step
 
 **Recommended:** Implement Streamlit UI to make the tool accessible to coaches
 - Upload psych sheet PDF
@@ -270,4 +270,4 @@ This would transform the pipeline from a Python library into a user-friendly app
 
 ---
 
-**Status:** ✅ Core pipeline production-ready and fully functional
+**Status:**  Core pipeline production-ready and fully functional

@@ -19,11 +19,11 @@ with tempfile.TemporaryDirectory(prefix="heatwave_") as tmpdir:
 ```
 
 **Guarantees:**
-- ✅ Every generation runs in its own isolated temp folder
-- ✅ PDFs are read into memory immediately after generation
-- ✅ Temp folders are auto-deleted after the context exits (even on errors)
-- ✅ No PDF files remain on disk after user downloads
-- ✅ Safe for multiple concurrent users (each gets own temp folder)
+-  Every generation runs in its own isolated temp folder
+-  PDFs are read into memory immediately after generation
+-  Temp folders are auto-deleted after the context exits (even on errors)
+-  No PDF files remain on disk after user downloads
+-  Safe for multiple concurrent users (each gets own temp folder)
 
 **Implementation Details:**
 - Full meet PDF: `Full_Meet_Heatsheets.pdf`
@@ -55,9 +55,9 @@ start_cleanup_daemon(
 ```
 
 #### B. Manual Cleanup Button
-- **Location:** Sidebar → "⚙️ Admin" section
+- **Location:** Sidebar → " Admin" section
 - **Action:** Clears ALL PDFs from `data/output/` immediately
-- **Button Label:** "🗑️ Clear All Generated Files"
+- **Button Label:** " Clear All Generated Files"
 - **Feedback:** Shows number of files deleted
 
 #### C. Utility Functions
@@ -68,22 +68,22 @@ start_cleanup_daemon(
 ### 3. Security Features
 
 #### Zero User Data Storage
-- ✅ No uploaded PDFs stored
-- ✅ No extracted text stored
-- ✅ No heat assignments stored
-- ✅ No user session data persisted
-- ✅ No IP addresses or user identifiers logged
+-  No uploaded PDFs stored
+-  No extracted text stored
+-  No heat assignments stored
+-  No user session data persisted
+-  No IP addresses or user identifiers logged
 
 #### Memory-Only Processing
-- ✅ Uploaded PDFs: Extracted in memory with `tempfile.NamedTemporaryFile`
-- ✅ Generated PDFs: Stored in temporary directories, read into memory
-- ✅ Text parsing: Discarded after seeding
-- ✅ Heat assignments: Kept in Streamlit session state only (volatile)
+-  Uploaded PDFs: Extracted in memory with `tempfile.NamedTemporaryFile`
+-  Generated PDFs: Stored in temporary directories, read into memory
+-  Text parsing: Discarded after seeding
+-  Heat assignments: Kept in Streamlit session state only (volatile)
 
 #### Concurrent User Safety
-- ✅ Each generation uses unique temp folder
-- ✅ No file contention between users
-- ✅ Safe for deployment behind Caddy with multiple coaches
+-  Each generation uses unique temp folder
+-  No file contention between users
+-  Safe for deployment behind Caddy with multiple coaches
 
 ---
 
@@ -233,21 +233,21 @@ pytest tests/test_cleanup.py  # Create this if needed
 ## Security Compliance
 
 ### GDPR
-- ✅ No personal data stored
-- ✅ No user tracking
-- ✅ No data retention
+-  No personal data stored
+-  No user tracking
+-  No data retention
 
 ### HIPAA
-- ✅ No health information stored
-- ✅ No access logs with identifiers
-- ✅ Secure temporary storage only
+-  No health information stored
+-  No access logs with identifiers
+-  Secure temporary storage only
 
 ### General Privacy
-- ✅ Zero-knowledge architecture
-- ✅ Stateless processing
-- ✅ Temporary data only
+-  Zero-knowledge architecture
+-  Stateless processing
+-  Temporary data only
 
 ---
 
 ## Contact & Support
-For questions about the secure hosting implementation, refer to this document or check the sidebar "🔒 Security" info box in the app.
+For questions about the secure hosting implementation, refer to this document or check the sidebar " Security" info box in the app.

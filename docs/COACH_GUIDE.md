@@ -1,12 +1,12 @@
 # heatWave.exe Quick Start Guide for Coaches
 
-## ✅ Installation (5 seconds)
+##  Installation (5 seconds)
 
 1. **Download** `heatWave.exe` (or `heatWave.zip` and extract it)
 2. **Move to Desktop** (or any location you prefer) - optional
 3. **Done!** No installation needed
 
-## ▶️ Running heatWave
+##  Running heatWave
 
 ### First Time:
 1. **Double-click** `heatWave.exe`
@@ -18,7 +18,7 @@
 - Just double-click `heatWave.exe` again
 - It opens in your browser automatically
 
-## 🏊 Using heatWave
+##  Using heatWave
 
 ### Step 1: Upload Psych Sheet
 - Click "Upload" tab
@@ -52,7 +52,7 @@
 - Print for meet day
 - Distribute to officials, timers, and other coaches
 
-## 🎯 Tips & Tricks
+##  Tips & Tricks
 
 ### Upload Different Meets
 - Just upload a different psych sheet
@@ -73,16 +73,16 @@
 - Subsequent runs are faster
 - If stuck after 30 seconds, close and try again
 
-## 🔒 Privacy & Security
+##  Privacy & Security
 
-✅ **Your data is safe:**
+ **Your data is safe:**
 - All processing happens on your computer
 - No internet connection required
 - No PDFs or data saved to disk
 - Nothing uploaded to servers
 - Completely anonymous and private
 
-## ⚙️ Troubleshooting
+##  Troubleshooting
 
 ### "File Not Found" Error
 - Make sure heatWave.exe is in the same folder as other files
@@ -104,14 +104,14 @@
 - Download a fresh copy of heatWave.exe
 - Ensure you have ~200 MB of free disk space
 
-## 📧 Getting Help
+##  Getting Help
 
 For issues or questions:
 1. Check this guide (might already have answer)
 2. Try closing and restarting the app
 3. Reach out to the development team
 
-## 🚀 You're Ready!
+##  You're Ready!
 
 That's all you need to know. Double-click, upload, generate, download. Simple as that!
 
@@ -119,4 +119,4 @@ For more detailed information, see the full [README.md](README.md) or [STREAMLIT
 
 ---
 
-**Happy Heat Seeding! 🏊**
+**Happy Heat Seeding! **

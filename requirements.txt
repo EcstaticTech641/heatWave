@@ -1,12 +1,8 @@
-# Dependencies for heatWave project
+# Dependencies for heatWave
 
 # PDF / Text extraction
 PyMuPDF
 pdfplumber
-
-# OCR Fallback
-pdf2image
-pytesseract
 
 # Data validation
 pydantic
@@ -15,16 +11,9 @@ pydantic
 reportlab
 
 # Desktop UI
-flask
+streamlit
 pywebview
 
-# Web UI (development only — not needed for .exe)
-# streamlit
-
-# Production / Multi-user
-Flask-Session
-waitress
-python-dotenv
-
-# Testing
+# Development / Testing
 pytest
+python-dotenv

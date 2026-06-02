@@ -252,7 +252,7 @@
 
 <!-- HEADER -->
 <div class="header">
-  <div class="header-logo">🏊 heatWave</div>
+  <div class="header-logo"> heatWave</div>
   <div class="header-sub">Psych Sheet → Heat Sheet Converter</div>
 </div>
 
@@ -260,18 +260,18 @@
 
   <!-- STEP NAV -->
   <div class="steps">
-    <button class="step-btn active" onclick="showPanel('upload')" id="tab-upload">📤 Upload</button>
-    <button class="step-btn" onclick="showPanel('preview')" id="tab-preview" disabled>👀 Preview</button>
-    <button class="step-btn" onclick="showPanel('settings')" id="tab-settings" disabled>⚙️ Settings</button>
-    <button class="step-btn" onclick="showPanel('generate')" id="tab-generate" disabled>📄 Generate</button>
+    <button class="step-btn active" onclick="showPanel('upload')" id="tab-upload"> Upload</button>
+    <button class="step-btn" onclick="showPanel('preview')" id="tab-preview" disabled> Preview</button>
+    <button class="step-btn" onclick="showPanel('settings')" id="tab-settings" disabled> Settings</button>
+    <button class="step-btn" onclick="showPanel('generate')" id="tab-generate" disabled> Generate</button>
   </div>
 
   <!-- ===== UPLOAD PANEL ===== -->
   <div class="panel active" id="panel-upload">
     <div class="card">
-      <h2>📤 Upload Psych Sheet</h2>
+      <h2> Upload Psych Sheet</h2>
       <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-        <div class="icon">📂</div>
+        <div class="icon"></div>
         <div><strong>Click or drag-and-drop</strong> your USA Swimming psych sheet PDF</div>
         <p>Supports standard two-column psych sheet layouts</p>
         <input type="file" id="fileInput" accept=".pdf">
@@ -283,7 +283,7 @@
   <!-- ===== PREVIEW PANEL ===== -->
   <div class="panel" id="panel-preview">
     <div class="card">
-      <h2>👀 Event Preview</h2>
+      <h2> Event Preview</h2>
       <div id="previewMetrics" class="metrics"></div>
       <table class="event-list" id="eventTable">
         <thead>
@@ -304,7 +304,7 @@
   <!-- ===== SETTINGS PANEL ===== -->
   <div class="panel" id="panel-settings">
     <div class="card">
-      <h2>⚙️ Heat Sheet Settings</h2>
+      <h2> Heat Sheet Settings</h2>
       <div class="form-row">
         <div class="form-group">
           <label>Meet Title</label>
@@ -331,10 +331,10 @@
   <!-- ===== GENERATE PANEL ===== -->
   <div class="panel" id="panel-generate">
     <div class="card">
-      <h2>📄 Generate Heat Sheets</h2>
+      <h2> Generate Heat Sheets</h2>
       <div id="genConfig" style="margin-bottom:16px; color:var(--text-dim); font-size:.9em;"></div>
       <button class="btn btn-primary" id="generateBtn" onclick="doGenerate()">
-        🚀 Generate Heat Sheets
+         Generate Heat Sheets
       </button>
       <div id="genProgress" style="margin-top:16px; display:none;">
         <div class="progress-bar"><div class="fill" id="genFill" style="width:0%"></div></div>
@@ -343,16 +343,16 @@
       <div id="genResults" style="margin-top:20px"></div>
     </div>
     <div class="card" id="downloadCard" style="display:none">
-      <h2>📥 Download</h2>
+      <h2> Download</h2>
       <button class="btn btn-success" onclick="downloadFull()" style="margin-bottom:14px;">
-        📄 Download Full Meet PDF
+         Download Full Meet PDF
       </button>
       <div id="individualDownloads" class="download-grid"></div>
     </div>
   </div>
 
   <div class="footer">
-    🏊 heatWave — Made for USA Swimming coaches
+     heatWave
   </div>
 </div>
 
@@ -427,13 +427,13 @@ async function uploadFile(file) {
     const data = await res.json();
 
     if (!res.ok || data.error) {
-      status.innerHTML = `<div style="color:var(--error);">❌ ${data.error || 'Upload failed'}</div>`;
+      status.innerHTML = `<div style="color:var(--error);"> ${data.error || 'Upload failed'}</div>`;
       toast('Parse error', 'error');
       return;
     }
 
     parsedEvents = data;
-    status.innerHTML = `<div style="color:var(--success);">✅ Parsed <strong>${data.event_count}</strong> events and <strong>${data.total_entries}</strong> entries from <strong>${data.filename}</strong></div>`;
+    status.innerHTML = `<div style="color:var(--success);"> Parsed <strong>${data.event_count}</strong> events and <strong>${data.total_entries}</strong> entries from <strong>${data.filename}</strong></div>`;
     toast('PDF parsed successfully!', 'success');
 
     enableTabs('preview', 'settings', 'generate');
@@ -441,7 +441,7 @@ async function uploadFile(file) {
     showPanel('preview');
 
   } catch (err) {
-    status.innerHTML = `<div style="color:var(--error);">❌ Network error: ${err.message}</div>`;
+    status.innerHTML = `<div style="color:var(--error);"> Network error: ${err.message}</div>`;
     toast('Connection error', 'error');
   }
 }
@@ -498,7 +498,7 @@ async function doGenerate() {
     fill.style.width = '100%';
 
     if (!res.ok || data.error) {
-      results.innerHTML = `<div style="color:var(--error);">❌ ${data.error}</div>`;
+      results.innerHTML = `<div style="color:var(--error);"> ${data.error}</div>`;
       toast('Generation failed', 'error');
       return;
     }
@@ -530,11 +530,11 @@ async function doGenerate() {
     toast('Heat sheets generated!', 'success');
 
   } catch (err) {
-    results.innerHTML = `<div style="color:var(--error);">❌ ${err.message}</div>`;
+    results.innerHTML = `<div style="color:var(--error);"> ${err.message}</div>`;
     toast('Error generating', 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '🚀 Generate Heat Sheets';
+    btn.innerHTML = ' Generate Heat Sheets';
     setTimeout(() => { progress.style.display = 'none'; fill.style.width = '0%'; }, 1500);
   }
 }

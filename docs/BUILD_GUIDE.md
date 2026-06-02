@@ -56,7 +56,7 @@ pyinstaller --clean heatWave.spec
 
 **What's happening:**
 - PyInstaller reads `heatWave.spec` configuration
-- Analyzes `run_streamlit.py` and all dependencies
+- Analyzes `run_desktop.py` and all dependencies
 - Bundles everything into `dist/heatWave/`
 - Creates `dist/heatWave.exe`
 
@@ -85,7 +85,7 @@ heatWave.exe
 
 **Expected behavior:**
 1. Console window opens briefly
-2. "🏊 Starting heatWave..." message
+2. " Starting heatWave..." message
 3. Browser opens to `http://localhost:8501`
 4. Streamlit UI loads (may take 10-15 seconds first time)
 
@@ -315,10 +315,10 @@ Before distributing to coaches:
 6. **Close** the app by closing the browser or hitting Ctrl+C in any console
 
 **Important Notes:**
-- ✅ No installation required
-- ✅ No Python needed
-- ✅ Works offline (for local PDF processing)
-- ✅ Safe and anonymous (zero data stored)
+-  No installation required
+-  No Python needed
+-  Works offline (for local PDF processing)
+-  Safe and anonymous (zero data stored)
 
 ---
 
@@ -339,4 +339,4 @@ If you encounter issues:
 3. Rebuild with `console=True` to see error messages
 4. Create an issue with detailed error output
 
-Good luck! 🏊
+Good luck! 

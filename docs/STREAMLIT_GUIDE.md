@@ -6,7 +6,7 @@
 
 1. **Start the app:**
    ```bash
-   python run_streamlit.py
+   python run_desktop.py
    ```
    The app opens in your browser at `http://localhost:8501`
 
@@ -41,7 +41,7 @@
 
 ## Features Overview
 
-### 📤 Upload Tab
+###  Upload Tab
 - Drag-and-drop PDF upload
 - File size display
 - Quick statistics after parsing
@@ -49,20 +49,20 @@
   - Relay vs individual events
   - Total entries
 
-### 👀 Preview Tab
+###  Preview Tab
 - View all parsed events
 - Filter by event type (All/Individual/Relay)
 - Search by event name
 - See sample entries for each event
 - Verify data accuracy before generating
 
-### ⚙️ Settings Tab
+###  Settings Tab
 - **Meet Title:** Name of the meet (displayed on heat sheets)
 - **Meet Date:** Date to print on heat sheets
 - **Number of Lanes:** Pool configuration (4-10 lanes, typically 8)
 - Real-time preview of settings
 
-### 📊 Generate Tab
+###  Generate Tab
 - Review configuration before generating
 - Progress indicators during seeding
 - Heat statistics:
@@ -132,13 +132,13 @@ Each heat sheet shows:
 
 ## Tips & Troubleshooting
 
-### ✅ Best Practices
+###  Best Practices
 1. **Always preview first** - Check that events parsed correctly
 2. **Verify meet info** - Make sure date and title are correct
 3. **Confirm pool lanes** - Use 8 unless your pool is different
 4. **Print a test page** - Check formatting before final print
 
-### ❌ Common Issues
+###  Common Issues
 
 **"Error processing PDF"**
 - Make sure you have a valid USA Swimming psych sheet
@@ -158,7 +158,7 @@ Each heat sheet shows:
 - Check the Preview tab to see exactly what was extracted
 - You can still generate heats - the seeding works by entry count
 
-### 🔄 Redo Everything
+###  Redo Everything
 1. Refresh the page (Ctrl+R or Cmd+R)
 2. Start over with a new PDF
 3. All session data is cleared
@@ -180,7 +180,7 @@ pip install -r requirements.txt
 
 ### Running the App
 ```bash
-python run_streamlit.py
+python run_desktop.py
 ```
 
 ### Performance
@@ -230,4 +230,4 @@ For questions or problems:
 
 **Version:** 1.0  
 **Last Updated:** April 2026  
-**Made for USA Swimming Coaches**
+**Designed for meet directors**

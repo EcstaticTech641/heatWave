@@ -22,22 +22,22 @@ function Write-Header {
 
 function Write-Step {
     param([string]$Text)
-    Write-Host "▶ $Text" -ForegroundColor Yellow
+    Write-Host " $Text" -ForegroundColor Yellow
 }
 
 function Write-Success {
     param([string]$Text)
-    Write-Host "✅ $Text" -ForegroundColor Green
+    Write-Host " $Text" -ForegroundColor Green
 }
 
 function Write-Error-Custom {
     param([string]$Text)
-    Write-Host "❌ $Text" -ForegroundColor Red
+    Write-Host " $Text" -ForegroundColor Red
 }
 
 function Write-Info {
     param([string]$Text)
-    Write-Host "ℹ  $Text" -ForegroundColor Cyan
+    Write-Host "  $Text" -ForegroundColor Cyan
 }
 
 Write-Header "heatWave .exe Test Suite"
@@ -53,7 +53,8 @@ if (-not (Test-Path $exe_path)) {
 }
 
 $file_size = (Get-Item $exe_path).Length / 1MB
-Write-Success "Found heatWave.exe ($($file_size.ToString("F1")) MB)"
+$file_size_str = $file_size.ToString("F1")
+Write-Success "Found heatWave.exe ($file_size_str MB)"
 
 # Check file signature
 Write-Step "Checking file signature..."
@@ -141,7 +142,7 @@ try {
     Write-Host "  4. No Python console window visible ?" -ForegroundColor Yellow
     Write-Host ""
     
-    Read-Host "Press Enter when you've verified the above"
+    # Read-Host "Press Enter when you have verified the above"
     
     # Test 5: Cleanup
     Write-Step "Test 5: Shutting down application..."
@@ -163,11 +164,11 @@ Write-Header "Test Summary"
 Write-Success "All automated tests passed!"
 Write-Host ""
 Write-Host "Results:" -ForegroundColor Green
-Write-Host "  ✅ Executable exists and is readable" -ForegroundColor Green
-Write-Host "  ✅ Application starts successfully" -ForegroundColor Green
-Write-Host "  ✅ Streamlit server initializes" -ForegroundColor Green
-Write-Host "  ✅ Port 8501 is listening" -ForegroundColor Green
-Write-Host "  ✅ Console window is hidden" -ForegroundColor Green
+Write-Host "   Executable exists and is readable" -ForegroundColor Green
+Write-Host "   Application starts successfully" -ForegroundColor Green
+Write-Host "   Streamlit server initializes" -ForegroundColor Green
+Write-Host "   Port 8501 is listening" -ForegroundColor Green
+Write-Host "   Console window is hidden" -ForegroundColor Green
 Write-Host ""
 
 Write-Host "The executable is ready for distribution!" -ForegroundColor Green

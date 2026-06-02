@@ -1,57 +1,49 @@
-# HeatWave - Complete Project README
+# heatWave
 
-## 🏊 Project Overview
-
-**heatWave** is a tool that transforms USA Swimming psych sheets (entry lists) into professionally formatted heat sheets for meet operations. It eliminates hours of manual work by automating the extraction, parsing, seeding, and PDF generation workflow.
+**heatWave** transforms USA Swimming psych sheets (entry lists) into professionally formatted heat sheets for meet operations — eliminating hours of manual work by automating extraction, parsing, seeding, and PDF generation.
 
 ---
 
-## 🚀 Quick Start (For Coaches)
+## Quick Start (For Coaches)
 
-### Option 1: Download heatWave.exe (Easiest for Coaches ⭐)
+### Option 1: Download heatWave.exe (Recommended)
 
-1. **Download** `heatWave.exe` (~200 MB)
-2. **Double-click** to launch
-3. **Browser opens** automatically
-4. **Use the app** - No Python or installation needed!
+1. **Download** the `dist/heatWave/` folder (or the Inno Setup installer)
+2. **Double-click** `heatWave.exe` to launch
+3. **A native desktop window opens** — no browser needed, no Python required!
+4. **Use the app** — upload your psych sheet and generate heat sheets in seconds
 
-**That's it!** The executable includes everything needed. Works on Windows 10/11 with zero setup.
+> **Works on Windows 10/11 with zero setup.**
 
-### Option 2: Python Installation (For Developers)
-
-#### Installation (One-Time Setup)
+### Option 2: Run from Source (For Developers)
 
 ```bash
-# Clone or download the project
-cd heatWave
-
-# Install Python dependencies
+# Clone the repo and install dependencies
 pip install -r requirements.txt
+
+# Launch the desktop app
+python run_desktop.py
 ```
 
-#### Running the App
+The app opens in a native `pywebview` desktop window powered by Streamlit.
 
-```bash
-python run_streamlit.py
-```
+---
 
-Open your browser to `http://localhost:8501`
-
-### Five-Step Workflow (Both Methods)
+## Five-Step Workflow
 
 1. **Upload** your psych sheet PDF (drag & drop)
 2. **Preview** parsed events to verify accuracy
 3. **Customize** meet name, date, and pool lanes
-4. **Generate** heat sheets (click button, wait ~5 seconds)
-5. **Download** as PDFs (full meet or individual events)
+4. **Generate** heat sheets (click button, ~5 seconds)
+5. **Download** as PDFs — full meet or individual events
 
 ---
 
-## 📊 What It Does
+## What It Does
 
 ### Input
-- USA Swimming psych sheet PDF (any standard format)
-- Typically 80-150 KB file
+- USA Swimming psych sheet PDF (standard text-based format)
+- Typically 80–150 KB
 
 ### Processing
 1. **Extract** text from PDF (handles two-column layouts)
@@ -60,56 +52,48 @@ Open your browser to `http://localhost:8501`
 4. **Generate** professional PDF heat sheets
 
 ### Output
-- **Full Meet PDF** - All events in one document (for meet director)
-- **Individual Event PDFs** - One per event (for timers/officials)
+- **Full Meet PDF** — all events in one document (for meet director)
+- **Individual Event PDFs** — one per event (for timers/officials)
 - Both print-ready and coach-friendly formatted
 
-### Example Results
+### Example
 ```
 Input:  Oklahoma Swimming 10-Under Championship psych sheet
         78.3 KB, 28 events, 702 swimmers
 
 Processing: < 5 seconds
 
-Output: 
-  - Full_Meet_Heatsheets.pdf (83.7 KB, 29 pages)
-  - Event_01_Heatsheet.pdf (2.9 KB)
-  - Event_02_Heatsheet.pdf (2.7 KB)
+Output:
+  Full_Meet_Heatsheets.pdf  (83.7 KB, 29 pages)
+  Event_01_Heatsheet.pdf    (2.9 KB)
+  Event_02_Heatsheet.pdf    (2.7 KB)
   ... and 26 more individual event PDFs
 ```
 
 ---
 
-## 🎯 Features
+## Features
 
-### Core Features
-✅ Drag-and-drop PDF upload interface
-✅ Live event preview with filters and search
-✅ Custom meet settings (title, date, lanes)
-✅ USA Swimming-compliant heat seeding
-✅ Professional PDF generation
-✅ Individual event PDF download
-✅ Full meet PDF compilation
-✅ Works 100% offline
+### Core
+- Drag-and-drop PDF upload interface
+- Live event preview with filters and search
+- Custom meet settings (title, date, lanes)
+- USA Swimming-compliant heat seeding
+- Professional PDF generation
+- Individual and full-meet PDF downloads
+- **100% offline** — no internet required, no data ever uploaded
 
-### Supported Features
-✅ Relay and individual events
-✅ 4-10 lane pools (configurable)
-✅ NT (no time) entries
-✅ Multi-word names and team codes
-✅ Standard seed time formats (MM:SS.XX)
-✅ Batch processing (28+ events at once)
-
-### Quality Assurance
-✅ 100% entry assignment (no missing swimmers)
-✅ No duplicate assignments
-✅ Proper lane distribution (7.0 avg entries/heat)
-✅ USA Swimming seeding rules enforced
-✅ Professional PDF formatting
+### Supported
+- Relay and individual events
+- 4–10 lane pools (configurable)
+- NT (no time) entries
+- Multi-word names and team codes
+- Standard seed time formats (`MM:SS.XX`)
+- Batch processing (28+ events at once)
 
 ---
 
-## 🏗️ Project Architecture
+## Project Architecture
 
 ### Directory Structure
 ```
@@ -120,60 +104,60 @@ heatWave/
 │   ├── parser/
 │   │   └── extractor.py         # PDF → Events
 │   ├── seeding/
-│   │   └── seeder.py            # Event → Heat assignments
+│   │   └── seeder.py            # Events → Heat assignments
 │   ├── core/
 │   │   └── pdf_generator.py     # Heat sheets → PDFs
 │   └── ui/
-│       └── streamlit_app.py     # Web interface
-├── tests/                        # Unit and integration tests
+│       ├── streamlit_app.py     # Streamlit UI
+│       └── templates/           # UI templates / assets
+├── tests/                       # Unit and integration tests
+├── assets/
+│   └── icon.ico                 # App icon
 ├── data/
 │   ├── samples/                 # Example psych sheets
 │   └── output/                  # Generated heat sheets
+├── run_desktop.py               # Desktop launcher (Streamlit + pywebview)
+├── build_heatwave.py            # Python build script
+├── heatWave.spec                # PyInstaller spec file
+├── installer.iss                # Inno Setup installer script
 ├── requirements.txt             # Python dependencies
-├── run_streamlit.py             # Launch script
-├── project.md                   # Project specifications
 └── README.md                    # This file
 ```
 
 ### Technology Stack
-- **Backend:** Python 3.11+
-- **PDF Extraction:** pdfplumber
-- **Data Validation:** Pydantic
-- **PDF Generation:** ReportLab
-- **UI:** Streamlit
-- **Testing:** pytest
+| Layer | Technology |
+|---|---|
+| Language | Python 3.11+ |
+| Desktop Window | pywebview |
+| UI Framework | Streamlit |
+| PDF Extraction | pdfplumber, PyMuPDF |
+| Data Validation | Pydantic |
+| PDF Generation | ReportLab |
+| Packaging | PyInstaller + Inno Setup |
+| Testing | pytest |
 
 ---
 
-## 💻 For Developers
+## For Developers
 
 ### Core Components
 
-#### 1. Parser Module (`src/parser/extractor.py`)
-Extracts and parses psych sheet PDFs:
+#### 1. Parser (`src/parser/extractor.py`)
 ```python
 from src.parser.extractor import extract_text_from_pdf, parse_events_from_text
 
-# Extract text from PDF
-text = extract_text_from_pdf("psych_sheet.pdf")
-
-# Parse events
-events = parse_events_from_text(text)
-# Returns: List[Event] with parsed entries
+text   = extract_text_from_pdf("psych_sheet.pdf")
+events = parse_events_from_text(text)  # → List[Event]
 ```
 
-#### 2. Seeding Module (`src/seeding/seeder.py`)
-Creates heats with USA Swimming rules:
+#### 2. Seeder (`src/seeding/seeder.py`)
 ```python
 from src.seeding.seeder import seed_event
 
-# Seed events
-heat_sheet = seed_event(event, lanes=8)
-# Returns: HeatSheet with lane assignments
+heat_sheet = seed_event(event, lanes=8)  # → HeatSheet
 ```
 
 #### 3. PDF Generator (`src/core/pdf_generator.py`)
-Generates printable PDF heat sheets:
 ```python
 from src.core.pdf_generator import generate_full_meet_pdf
 
@@ -185,46 +169,23 @@ generate_full_meet_pdf(
 )
 ```
 
-#### 4. Streamlit UI (`src/ui/streamlit_app.py`)
-Interactive web interface for coaches:
-```bash
-python run_streamlit.py
-```
-
-### Running Tests
+#### 4. Desktop Launcher (`run_desktop.py`)
+Starts Streamlit in a background thread and wraps it in a native `pywebview` window. Credentials are auto-created to skip Streamlit's first-run email prompt.
 
 ```bash
-# Parser tests
-pytest test_parsing.py
-
-# Seeding tests
-pytest test_seeding.py
-
-# PDF generation tests
-pytest test_pdf_generation.py
-
-# Full pipeline integration
-pytest test_integration.py
-
-# Streamlit UI integration
-pytest test_streamlit_integration.py
+python run_desktop.py
 ```
 
-### Example Usage (Python)
-
+### Full Pipeline Example
 ```python
 from src.parser.extractor import extract_text_from_pdf, parse_events_from_text
 from src.seeding.seeder import seed_event
 from src.core.pdf_generator import generate_full_meet_pdf
 
-# 1. Extract and parse
-text = extract_text_from_pdf("psych_sheet.pdf")
-events = parse_events_from_text(text)
-
-# 2. Seed all events
+text        = extract_text_from_pdf("psych_sheet.pdf")
+events      = parse_events_from_text(text)
 heat_sheets = [seed_event(e, lanes=8) for e in events]
 
-# 3. Generate PDFs
 generate_full_meet_pdf(
     heat_sheets,
     "output/heat_sheets.pdf",
@@ -233,305 +194,174 @@ generate_full_meet_pdf(
 )
 ```
 
----
-
-## 📚 Documentation
-
-### User Guides
-- **[STREAMLIT_GUIDE.md](STREAMLIT_GUIDE.md)** - Complete UI user guide for coaches
-- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Technical overview for developers
-
-### Technical Docs
-- **[project.md](project.md)** - Original project specifications
-- Inline docstrings in all Python modules
-
----
-
-## 🧪 Testing
-
-All components are thoroughly tested:
-
-```
-test_parsing.py              # 28 events, 702 entries parsed ✓
-test_seeding.py              # Heat distribution and lane placement ✓
-test_pdf_generation.py       # PDF creation and formatting ✓
-test_integration.py          # Complete pipeline end-to-end ✓
-test_streamlit_integration.py # UI component integration ✓
-```
-
-### Test Results Summary
-- ✅ 702 entries assigned correctly
-- ✅ 100 heats created with optimal distribution
-- ✅ Professional PDFs generated (189.9 KB output)
-- ✅ All tests passing
-
----
-
-## 🔧 Configuration
-
-### Meet Settings (in Streamlit UI)
-- **Meet Title:** Name displayed on heat sheets
-- **Meet Date:** Date to print (format: MM/DD/YYYY)
-- **Pool Lanes:** Number of lanes (4-10, typically 8)
-
-### Advanced (Python API)
-All functions support customization:
-```python
-# Custom lane count
-heat_sheet = seed_event(event, lanes=6)
-
-# Custom PDF styling (ReportLab)
-# Modify src/core/pdf_generator.py TableStyle
+### Running Tests
+```bash
+pytest                          # Run all tests
+pytest tests/test_parsing.py    # Parser only
+pytest tests/test_seeding.py    # Seeder only
+pytest tests/test_integration.py # Full pipeline
 ```
 
 ---
 
-## 📋 USA Swimming Seeding Rules
+## Building & Distribution
+
+### Prerequisites
+- Python 3.11+
+- `pip install -r requirements.txt`
+- `pip install pyinstaller`
+- [Inno Setup](https://jrsoftware.org/isinfo.php) (for installer, optional)
+
+### Build the Standalone Executable
+```bash
+# Option 1: Python build script (recommended)
+python build_heatwave.py
+
+# Option 2: Manual PyInstaller
+pyinstaller --clean heatWave.spec
+```
+
+Output: `dist/heatWave/heatWave.exe` (~22 MB launcher + bundled dependencies)
+
+### Build the Windows Installer (Optional)
+With [Inno Setup](https://jrsoftware.org/isinfo.php) installed:
+```
+Open installer.iss in Inno Setup → Build → Compile
+```
+Output: `dist/heatWave_v1.0_setup.exe`
+
+### Distribute to Coaches
+**Portable (no install needed):**
+1. Zip the entire `dist/heatWave/` folder
+2. Share via email, Google Drive, Dropbox, or USB
+3. Coaches extract and double-click `heatWave.exe`
+
+**Installer:**
+1. Share `heatWave_v1.0_setup.exe`
+2. Coaches run the installer — creates Start Menu + optional Desktop shortcut
+3. Launch from Start Menu or Desktop
+
+---
+
+## USA Swimming Seeding Rules
 
 The app implements official USA Swimming preliminary seeding:
 
 **Heat Assignment:**
-- Swimmers sorted by seed time (slowest to fastest)
-- Heats filled sequentially (all fastest in Heat 1, etc.)
+- Swimmers sorted by seed time (slowest → fastest)
+- Heats filled sequentially (fastest swimmers in last heat)
 
 **Lane Placement (Center-Out):**
 ```
-For 8-lane pool:
-Lane 4 (fastest in heat) → 5 → 3 → 6 → 2 → 7 → 1 → 8
-```
-
-**Rationale:**
-- Centers lanes are most consistent/fair
-- Alternating out prevents bias
-- Matches official USA Swimming standard
-
----
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**"Error processing PDF"**
-- Verify it's a valid USA Swimming psych sheet
-- Try a different PDF from your meet software
-
-**"No events found"**
-- Check the PDF format (should be standard text-based)
-- Scanned PDFs may need OCR (future feature)
-
-**"Missing swimmers"**
-- The app extracts only what's in the PDF
-- Check if swimmers are actually in your psych sheet
-
-**"PDF looks wrong"**
-- Check Preview tab first to verify parsing
-- Customize settings (meet title, date, lanes)
-- Try regenerating
-
-### Getting Help
-1. Check [STREAMLIT_GUIDE.md](STREAMLIT_GUIDE.md) for detailed tips
-2. Review [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) technical details
-3. Run test files to verify installation
-
----
-
-## 📦 Dependencies
-
-### Required (included in requirements.txt)
-```
-pdfplumber    # PDF text extraction
-pydantic      # Data validation
-reportlab     # PDF generation
-streamlit     # Web UI
-pytest        # Testing
-```
-
-### Optional (for future features)
-```
-pdf2image     # For OCR support
-pytesseract   # Optical character recognition
-fastapi       # REST API (if needed)
-```
-
-### Installation
-```bash
-pip install -r requirements.txt
+8-lane pool:  Lane 4 → 5 → 3 → 6 → 2 → 7 → 1 → 8
 ```
 
 ---
 
-## 🚀 Deployment
+## Configuration
 
-### Running Locally (Coaches)
-```bash
-python run_streamlit.py
-```
-Open `http://localhost:8501` in browser
+### Meet Settings (in app UI)
+| Setting | Description |
+|---|---|
+| Meet Title | Name printed on every heat sheet |
+| Meet Date | Format: `MM/DD/YYYY` |
+| Pool Lanes | Number of lanes (4–10, typically 8) |
 
-### Building heatWave.exe (For Distribution) ⭐
-
-The easiest way to distribute heatWave to coaches is as a standalone Windows executable.
-
-**Prerequisites:**
-- Python 3.10+ installed
-- All dependencies from `requirements.txt`
-- PyInstaller: `pip install pyinstaller`
-
-**Build Steps:**
-
-```bash
-# Option 1: Use the PowerShell build script (easiest)
-.\build.ps1
-
-# Option 2: Manual build with PyInstaller
-pyinstaller --clean heatWave.spec
-
-# The result: dist/heatWave/heatWave.exe (~200 MB)
+### App Window (in `run_desktop.py`)
+```python
+webview.create_window(
+    'heatWave — Heat Sheet Generator',
+    'http://localhost:8501',
+    width=1100,
+    height=780,
+    min_size=(800, 600)
+)
 ```
 
-**Test the .exe:**
-```bash
-# Option 1: Test with PowerShell script
-.\test-exe.ps1
+---
 
-# Option 2: Manual test
-cd dist\heatWave
-.\heatWave.exe
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| "Error processing PDF" | Verify it's a standard USA Swimming text-based psych sheet |
+| "No events found" | Check the PDF isn't a scanned image (OCR not yet supported) |
+| "Missing swimmers" | Confirm the swimmers appear in the source psych sheet |
+| App window doesn't open | Ensure `pywebview` is installed: `pip install pywebview` |
+| Slow first launch | Normal — Streamlit's first boot takes ~3–5 seconds |
+
+---
+
+## Dependencies
+
+```
+pdfplumber       PDF text extraction
+PyMuPDF          PDF parsing (fitz)
+pydantic         Data validation
+reportlab        PDF generation
+streamlit        UI framework
+pywebview        Native desktop window
+pytest           Testing
 ```
 
-**Distribute to Coaches:**
-1. Zip the entire `dist/heatWave/` folder
-2. Share via email, Google Drive, Dropbox, or website
-3. Coaches download and extract
-4. Double-click `heatWave.exe` to launch
-5. Browser opens automatically - they're ready to use!
+---
 
-**For detailed build instructions, see:** [BUILD_GUIDE.md](BUILD_GUIDE.md)
+## Privacy & Security
 
-### Docker (Optional)
-For cloud deployment or Linux servers, you can use Docker (future enhancement).
+- **100% Offline** — no internet connection required
+- **No Data Storage** — PDFs generated in memory, not saved to disk
+- **Local Processing** — all computation on your machine
+- **Safe for Sensitive Data** — meet data never leaves your computer
 
 ---
 
-## 📈 Performance
+## Performance
 
-- **Processing Speed:** 28 events, 702 entries in <5 seconds
-- **Memory Usage:** ~50 MB during operation
-- **PDF Generation:** 83.7 KB output in <3 seconds
-- **Scalability:** Tested with 700+ entries, designed for larger meets
-
----
-
-## 🔒 Privacy & Security
-
-- ✅ **100% Offline:** No internet required, no data uploaded
-- ✅ **No Storage:** PDFs generated in temporary memory, cleaned up
-- ✅ **Local Processing:** All computation happens on your computer
-- ✅ **Safe for Sensitive Data:** Meet data never leaves your machine
+| Operation | Speed |
+|---|---|
+| PDF text extraction | 55K characters in < 1 second |
+| Event seeding (702 entries) | < 2 seconds |
+| Full-meet PDF generation | < 3 seconds |
+| Total end-to-end | < 5 seconds |
 
 ---
 
-## 📝 License & Credits
+## What's Next
 
-**Project:** heatWave  
-**Purpose:** Simplify USA Swimming meet management  
-**Version:** 1.0  
-**Last Updated:** April 2026
-
-Made for USA Swimming coaches and meet directors.
-
----
-
-## 🎓 Learning Resources
-
-The codebase includes:
-- ✅ Comprehensive docstrings
-- ✅ Type hints throughout
-- ✅ Working test examples
-- ✅ Demo scripts
-- ✅ Inline comments for complex logic
-
----
-
-## 🤝 Contributing
-
-Want to help improve heatWave?
-- Report bugs with example PDFs
-- Suggest features (add to GitHub Issues)
-- Submit pull requests with improvements
-- Share feedback from your meets
-
----
-
-## 📞 Support
-
-For questions or issues:
-1. Check the [STREAMLIT_GUIDE.md](STREAMLIT_GUIDE.md)
-2. Review [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)
-3. Run the test suite: `python test_integration.py`
-4. Contact the development team
-
----
-
-## ✨ What's Next?
-
-### Completed ✅
-- ✅ PDF text extraction
-- ✅ Event parsing
-- ✅ Heat seeding algorithm
-- ✅ PDF generation
-- ✅ Web UI (Streamlit)
-- ✅ Comprehensive testing
+### Completed in v1.0
+- PDF text extraction
+- Event parsing (28+ events, 700+ entries)
+- USA Swimming heat seeding algorithm
+- Professional PDF generation
+- Streamlit UI with drag-and-drop upload
+- Native desktop window (pywebview)
+- Portable `.exe` and Windows installer
 
 ### Future Enhancements
 - [ ] OCR support for scanned PDFs
 - [ ] Manual entry editing interface
-- [ ] Scratch/no-show handling
-- [ ] Export to Hy-Tek/Meet Maestro formats
-- [ ] Advanced seeding options
-- [ ] Meet timing integration
-- [ ] Mobile app version
+- [ ] Scratch / no-show handling
+- [ ] Export to Hy-Tek / Meet Maestro formats
+- [ ] Advanced seeding options (circle seeding, time trials)
+- [ ] macOS / Linux support
 
 ---
 
-## 📊 Project Statistics
-
-```
-Total LOC:        ~2,500 lines
-Test Coverage:    100% of core functions
-Functions:        35+ documented functions
-Modules:          7 core modules
-Test Files:       5 with 50+ test cases
-Documentation:    5 detailed guides
-
-Performance:
-- PDF parsing:    55K characters in <1 second
-- Event seeding:  702 entries in <2 seconds
-- PDF generation: 83.7 KB in <3 seconds
-```
-
----
-
-## 🎯 Quick Reference
+## Quick Reference
 
 | Task | Command |
-|------|---------|
-| Start UI | `python run_streamlit.py` |
-| Run tests | `pytest` |
-| Run single test | `pytest test_parsing.py` |
-| Demo | `python demo_full_pipeline.py` |
+|---|---|
+| Launch desktop app | `python run_desktop.py` |
+| Run all tests | `pytest` |
+| Build executable | `python build_heatwave.py` |
 
 ---
 
-**Ready to use? Start the Streamlit UI:**
-```bash
-python run_streamlit.py
-```
+## License & Credits
 
-**Questions? Check the guides:**
-- [STREAMLIT_GUIDE.md](STREAMLIT_GUIDE.md) - For coaches
-- [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - For developers
+**Project:** heatWave  
+**Version:** 1.0.0  
+**Last Updated:** June 2026  
+**License:** See [LICENSE](LICENSE)
 
----
-
-**Made with ❤️ for USA Swimming coaches**
+Made for USA Swimming coaches and meet directors.
