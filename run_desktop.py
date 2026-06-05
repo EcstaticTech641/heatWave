@@ -94,8 +94,8 @@ def main():
 
     # Resolve the path to the Streamlit UI script
     if getattr(sys, 'frozen', False):
-        app_path = os.path.join(os.path.dirname(sys.executable),
-                                "src", "ui", "streamlit_app.py")
+        app_dir = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+        app_path = os.path.join(app_dir, "src", "ui", "streamlit_app.py")
     else:
         app_path = os.path.join("src", "ui", "streamlit_app.py")
 
