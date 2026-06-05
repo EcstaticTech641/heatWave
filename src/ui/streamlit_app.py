@@ -4,6 +4,7 @@ Provides drag-and-drop PDF upload, live preview, and PDF generation.
 Zero-persistent-storage design: All PDFs generated in temporary folders and auto-deleted.
 """
 import io
+import re
 import tempfile
 from pathlib import Path
 import streamlit as st
@@ -19,6 +20,20 @@ from src.core.timeline import (
     _format_duration,
 )
 from src.utils.cleanup import start_cleanup_daemon, clear_directory, cleanup_old_files
+
+
+def sanitize_file_name(value: str) -> str:
+    """Return a safe filename by replacing unsupported characters."""
+    if not isinstance(value, str):
+        return ""
+    safe = re.sub(r'[<>:"/\\|?*\n\r\t]+', '_', value)
+    safe = re.sub(r'\s+', '_', safe).strip('_')
+    return safe[:100] or "HeatSheet"
+
+
+def get_downloads_folder() -> Path:
+    """Get the user's Downloads folder."""
+    return Path.home() / "Downloads"
 
 
 # ============================================================================
@@ -602,51 +617,64 @@ def main():
             if st.session_state.heat_sheets:
                 st.markdown("---")
                 st.markdown("### Download Heat Sheets")
+                st.caption(f"📁 Saves to: `{get_downloads_folder()}`")
 
                 timeline = st.session_state.get("timeline")
+                safe_title = sanitize_file_name(meet_title)
+                downloads = get_downloads_folder()
 
-                full_pdf, individual_pdfs = generate_pdfs(
-                    st.session_state.heat_sheets,
-                    meet_title,
-                    meet_date,
-                    num_lanes,
-                    timeline=timeline,
-                )
+                col1, col2 = st.columns(2)
 
-                if full_pdf:
-                    col1, col2 = st.columns(2)
-
-                    with col1:
-                        st.download_button(
-                            label="Download Full Meet PDF",
-                            data=full_pdf,
-                            file_name=f"HeatSheet_{meet_title.replace(' ', '_')}.pdf",
-                            mime="application/pdf",
-                            use_container_width=True,
-                        )
-
-                    with col2:
-                        page_count = len(st.session_state.heat_sheets) + 1
-                        st.info(
-                            f"File size: {len(full_pdf) / 1024:.1f} KB | "
-                            f"{page_count} pages"
-                        )
-
-                    if individual_pdfs:
-                        st.markdown("**Individual Event Heat Sheets:**")
-                        cols = st.columns(min(4, len(individual_pdfs)))
-                        for idx, (event_num, pdf_content) in enumerate(
-                            sorted(individual_pdfs.items())
-                        ):
-                            with cols[idx % len(cols)]:
-                                st.download_button(
-                                    label=f"Event {event_num}",
-                                    data=pdf_content,
-                                    file_name=f"Event_{event_num:02d}_Heatsheet.pdf",
-                                    mime="application/pdf",
-                                    use_container_width=True,
-                                    key=f"download_event_{event_num}",
+                with col1:
+                    if st.button(
+                        "💾 Save Full Meet PDF",
+                        use_container_width=True,
+                        key="save_full_meet",
+                        type="primary",
+                    ):
+                        with st.spinner("Generating full meet PDF..."):
+                            try:
+                                out_path = downloads / f"HeatSheet_{safe_title}.pdf"
+                                generate_full_meet_pdf(
+                                    st.session_state.heat_sheets,
+                                    str(out_path),
+                                    meet_title=meet_title,
+                                    meet_date=meet_date,
+                                    timeline=timeline,
                                 )
+                                st.success(f"✅ Saved: `{out_path.name}`")
+                            except Exception as e:
+                                st.error(f"Error: {e}")
+
+                with col2:
+                    page_count = len(st.session_state.heat_sheets) + 1
+                    st.info(f"{page_count} pages | {len(st.session_state.heat_sheets)} events")
+
+                st.markdown("**Individual Event Heat Sheets:**")
+                cols = st.columns(min(4, len(st.session_state.heat_sheets)))
+                for idx, heat_sheet in enumerate(
+                    sorted(st.session_state.heat_sheets, key=lambda h: h.event.number)
+                ):
+                    event = heat_sheet.event
+                    with cols[idx % len(cols)]:
+                        if st.button(
+                            f"Event {event.number}",
+                            use_container_width=True,
+                            key=f"save_event_{event.number}",
+                        ):
+                            with st.spinner(f"Saving Event {event.number}..."):
+                                try:
+                                    out_path = downloads / f"Event_{event.number:02d}_Heatsheet.pdf"
+                                    generate_heat_sheet_pdf(
+                                        heat_sheet,
+                                        str(out_path),
+                                        meet_title=meet_title,
+                                        meet_date=meet_date,
+                                        timeline=timeline,
+                                    )
+                                    st.success(f"✅ `{out_path.name}`")
+                                except Exception as e:
+                                    st.error(f"Error: {e}")
 
     # ========================================================================
     # TAB 5: FIND SWIMMER
