@@ -275,13 +275,7 @@ def main():
         )
 
         if uploaded_file is not None:
-            # Reset state on new upload
             st.session_state.pdf_uploaded = True
-            st.session_state.events = None
-            st.session_state.heat_sheets = None
-            st.session_state.timeline = None
-            st.session_state.selected_swimmer = None
-            st.session_state.swimmer_search_query = ""
             st.markdown(
                 '<div class="success-box">PDF uploaded successfully!</div>',
                 unsafe_allow_html=True,
@@ -326,6 +320,18 @@ def main():
                         st.metric("Total Entries", total_entries)
 
                     st.success("Ready to seed heats! Go to the **Settings** tab to customize.")
+
+        # Reset state button
+        if st.session_state.events is not None:
+            st.markdown("---")
+            if st.button("🔄 Reset State", type="secondary", width='stretch'):
+                st.session_state.pdf_uploaded = False
+                st.session_state.events = None
+                st.session_state.heat_sheets = None
+                st.session_state.timeline = None
+                st.session_state.selected_swimmer = None
+                st.session_state.swimmer_search_query = ""
+                st.rerun()
 
     # ========================================================================
     # TAB 2: PREVIEW
