@@ -10,6 +10,7 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib import colors
 from src.models.schemas import HeatSheet, Entry, RelayEntry
+from src.core.timeline import MeetTimeline, _format_duration
 
 
 def generate_heat_sheet_pdf(
@@ -17,7 +18,8 @@ def generate_heat_sheet_pdf(
     output_path: str,
     meet_title: str = "Swimming Meet",
     meet_date: str = None,
-    page_size=letter
+    page_size=letter,
+    timeline: MeetTimeline = None,
 ) -> Path:
     """
     Generate a PDF heat sheet and save to disk using ReportLab.
@@ -81,6 +83,29 @@ def generate_heat_sheet_pdf(
         f"Event {event.number}: {event.gender} {event.distance} Yard {event.stroke}",
         event_style
     ))
+
+    # Timeline line (if available)
+    if timeline:
+        event_tl = next(
+            (e for e in timeline.events if e.event_number == event.number), None
+        )
+        if event_tl and event_tl.heats:
+            first_heat = event_tl.heats[0]
+            total_event_dur = sum(h.est_duration_minutes for h in event_tl.heats)
+            timing_style = ParagraphStyle(
+                'TimingLine',
+                parent=styles['Normal'],
+                fontSize=8,
+                textColor=colors.HexColor('#888888'),
+                spaceAfter=4,
+                alignment=1,
+            )
+            elements.append(Paragraph(
+                f"Est. Start: {first_heat.est_start_wall}  |  "
+                f"Est. Duration: {_format_duration(total_event_dur)}",
+                timing_style,
+            ))
+
     elements.append(Spacer(1 * inch, 0.15 * inch))
     
     # Group assignments by heat
@@ -199,7 +224,8 @@ def generate_full_meet_pdf(
     output_path: str,
     meet_title: str = "Swimming Meet",
     meet_date: str = None,
-    page_size=letter
+    page_size=letter,
+    timeline: MeetTimeline = None,
 ) -> Path:
     """
     Generate a complete meet PDF with multiple events.
@@ -288,6 +314,29 @@ def generate_full_meet_pdf(
             f"Event {event.number}: {event.gender} {event.distance} Yard {event.stroke}",
             event_style
         ))
+
+        # Timeline line (if available)
+        if timeline:
+            event_tl = next(
+                (e for e in timeline.events if e.event_number == event.number), None
+            )
+            if event_tl and event_tl.heats:
+                first_heat = event_tl.heats[0]
+                total_event_dur = sum(h.est_duration_minutes for h in event_tl.heats)
+                timing_style = ParagraphStyle(
+                    f'TimingLine_{event.number}',
+                    parent=styles['Normal'],
+                    fontSize=8,
+                    textColor=colors.HexColor('#888888'),
+                    spaceAfter=2,
+                    alignment=1,
+                )
+                elements.append(Paragraph(
+                    f"Est. Start: {first_heat.est_start_wall}  |  "
+                    f"Est. Duration: {_format_duration(total_event_dur)}",
+                    timing_style,
+                ))
+
         elements.append(Spacer(1 * inch, 0.1 * inch))
         
         # Group assignments by heat

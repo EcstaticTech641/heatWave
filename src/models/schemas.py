@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Union
 
 class Swimmer(BaseModel):
     name: str
@@ -28,9 +28,10 @@ class Event(BaseModel):
 
 class LaneAssignment(BaseModel):
     """A swimmer/relay assigned to a specific heat and lane."""
-    entry: Entry | RelayEntry
+    entry: Union[Entry, RelayEntry]
     heat: int
     lane: int
+    est_start_time: Optional[str] = None  # wall-clock string, e.g. "9:14 AM"
 
 
 class HeatSheet(BaseModel):
