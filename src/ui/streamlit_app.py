@@ -266,77 +266,66 @@ def main():
     with tab1:
         st.header("Upload Psych Sheet")
 
-        col1, col2 = st.columns([2, 1])
+        st.markdown("### Step 1: Choose Your PDF")
+        uploaded_file = st.file_uploader(
+            "Drag and drop your USA Swimming psych sheet PDF here",
+            type="pdf",
+            label_visibility="collapsed",
+            accept_multiple_files=False,
+        )
 
-        with col1:
-            st.markdown("### Step 1: Choose Your PDF")
-            uploaded_file = st.file_uploader(
-                "Drag and drop your USA Swimming psych sheet PDF here",
-                type="pdf",
-                label_visibility="collapsed",
+        if uploaded_file is not None:
+            # Reset state on new upload
+            st.session_state.pdf_uploaded = True
+            st.session_state.events = None
+            st.session_state.heat_sheets = None
+            st.session_state.timeline = None
+            st.session_state.selected_swimmer = None
+            st.session_state.swimmer_search_query = ""
+            st.markdown(
+                '<div class="success-box">PDF uploaded successfully!</div>',
+                unsafe_allow_html=True,
             )
+            st.info(f"File: **{uploaded_file.name}**")
+            st.info(f"Size: **{uploaded_file.size / 1024:.1f} KB**")
 
-            if uploaded_file is not None:
-                st.session_state.pdf_uploaded = True
-                st.markdown(
-                    '<div class="success-box">PDF uploaded successfully!</div>',
-                    unsafe_allow_html=True,
-                )
-                st.info(f"File: **{uploaded_file.name}**")
-                st.info(f"Size: **{uploaded_file.size / 1024:.1f} KB**")
+            if st.button("Parse PDF", type="primary", width='stretch'):
+                events, text = process_pdf(uploaded_file)
 
-                if st.button("Parse PDF", type="primary", use_container_width=True):
-                    events, text = process_pdf(uploaded_file)
+                if events:
+                    st.session_state.events = events
+                    st.session_state.pdf_uploaded = True
+                    # Reset downstream state when a new file is loaded
+                    st.session_state.heat_sheets = None
+                    st.session_state.timeline = None
+                    st.session_state.selected_swimmer = None
 
-                    if events:
-                        st.session_state.events = events
-                        st.session_state.pdf_uploaded = True
-                        # Reset downstream state when a new file is loaded
-                        st.session_state.heat_sheets = None
-                        st.session_state.timeline = None
-                        st.session_state.selected_swimmer = None
+                    st.markdown(
+                        '<div class="success-box">PDF parsed successfully!</div>',
+                        unsafe_allow_html=True,
+                    )
 
-                        st.markdown(
-                            '<div class="success-box">PDF parsed successfully!</div>',
-                            unsafe_allow_html=True,
-                        )
+                    relay_count = sum(
+                        1 for e in events
+                        if e.entries and not hasattr(e.entries[0], "swimmer")
+                    )
+                    individual_count = sum(
+                        1 for e in events
+                        if e.entries and hasattr(e.entries[0], "swimmer")
+                    )
+                    total_entries = sum(len(e.entries) for e in events)
 
-                        relay_count = sum(
-                            1 for e in events
-                            if e.entries and not hasattr(e.entries[0], "swimmer")
-                        )
-                        individual_count = sum(
-                            1 for e in events
-                            if e.entries and hasattr(e.entries[0], "swimmer")
-                        )
-                        total_entries = sum(len(e.entries) for e in events)
+                    col_a, col_b, col_c, col_d = st.columns(4)
+                    with col_a:
+                        st.metric("Total Events", len(events))
+                    with col_b:
+                        st.metric("Relay Events", relay_count)
+                    with col_c:
+                        st.metric("Individual Events", individual_count)
+                    with col_d:
+                        st.metric("Total Entries", total_entries)
 
-                        col_a, col_b, col_c, col_d = st.columns(4)
-                        with col_a:
-                            st.metric("Total Events", len(events))
-                        with col_b:
-                            st.metric("Relay Events", relay_count)
-                        with col_c:
-                            st.metric("Individual Events", individual_count)
-                        with col_d:
-                            st.metric("Total Entries", total_entries)
-
-                        st.success("Ready to seed heats! Go to the **Settings** tab to customize.")
-
-        with col2:
-            st.markdown("### Info")
-            st.markdown("""
-            **Supported Format:**
-            - USA Swimming psych sheets
-            - Two-column layouts
-            - Standard PDF format
-
-            **What happens:**
-            1. Extract swimmer data
-            2. Parse events & entries
-            3. Apply seeding rules
-            4. Generate heat sheets
-            """)
+                    st.success("Ready to seed heats! Go to the **Settings** tab to customize.")
 
     # ========================================================================
     # TAB 2: PREVIEW
@@ -543,7 +532,7 @@ def main():
 
             if st.button(
                 "Generate Heat Sheets", type="primary",
-                use_container_width=True, key="generate_btn"
+                width='stretch', key="generate_btn"
             ):
                 heat_sheets = seed_all_events(events, num_lanes)
 
@@ -628,7 +617,7 @@ def main():
                 with col1:
                     if st.button(
                         "💾 Save Full Meet PDF",
-                        use_container_width=True,
+                        width='stretch',
                         key="save_full_meet",
                         type="primary",
                     ):
@@ -659,7 +648,7 @@ def main():
                     with cols[idx % len(cols)]:
                         if st.button(
                             f"Event {event.number}",
-                            use_container_width=True,
+                            width='stretch',
                             key=f"save_event_{event.number}",
                         ):
                             with st.spinner(f"Saving Event {event.number}..."):
@@ -769,7 +758,7 @@ def main():
 
                         import pandas as pd
                         df = pd.DataFrame(rows, columns=headers)
-                        st.dataframe(df, use_container_width=True, hide_index=True)
+                        st.dataframe(df, width='stretch', hide_index=True)
 
                         st.caption(
                             f"{len(schedule)} individual event(s) for "
@@ -786,17 +775,15 @@ def main():
     # FOOTER
     # ========================================================================
     st.markdown("---")
-    st.markdown("""
-    <div class="info-box">
-    <b>💡 Tips:</b>
-    <br>1. Upload a USA Swimming psych sheet PDF
-    <br>2. Check the preview to verify parsing
-    <br>3. Customize settings (meet name, date, lanes, timeline gap)
-    <br>4. Generate heat sheets — estimated meet duration is shown automatically
-    <br>5. Use Find Swimmer to look up any athlete's heat, lane, and start time
-    <br>6. Download as PDF for printing at meets
-    </div>
-    """, unsafe_allow_html=True)
+    with st.expander("💡 Tips"):
+        st.markdown("""
+        1. Upload a USA Swimming psych sheet PDF
+        2. Check the preview to verify parsing
+        3. Customize settings (meet name, date, lanes, timeline gap)
+        4. Generate heat sheets — estimated meet duration is shown automatically
+        5. Use Find Swimmer to look up any athlete's heat, lane, and start time
+        6. Download as PDF for printing at meets
+        """)
 
 
 if __name__ == "__main__":
