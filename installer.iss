@@ -1,6 +1,6 @@
 [Setup]
 AppName=heatWave
-AppVersion=1.1.0
+AppVersion=1.1.1
 DefaultDirName={autopf}\heatWave
 DefaultGroupName=heatWave
 OutputDir=dist
