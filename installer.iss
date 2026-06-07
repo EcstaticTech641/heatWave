@@ -10,6 +10,7 @@ SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64
 DisableProgramGroupPage=yes
 SetupIconFile=assets\icon.ico
+UninstallDisplayIcon={app}\heatWave.exe
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
