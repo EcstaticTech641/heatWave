@@ -40,3 +40,9 @@ class HeatSheet(BaseModel):
     lanes: int  # Number of lanes (typically 8)
     heats: int  # Total number of heats
     assignments: List[LaneAssignment]  # All lane assignments sorted by heat/lane
+
+
+class SessionConfig(BaseModel):
+    session_name: str
+    start_time: str       # wall-clock string, e.g. "9:00 AM"
+    start_event_num: int  # first event number belonging to this session (inclusive)
