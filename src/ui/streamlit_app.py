@@ -4,6 +4,7 @@ Provides drag-and-drop PDF upload, live preview, and PDF generation.
 Zero-persistent-storage design: All PDFs generated in temporary folders and auto-deleted.
 """
 import io
+import os
 import re
 import tempfile
 from pathlib import Path
@@ -129,6 +130,25 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+def get_app_writable_dir() -> Path:
+    """
+    Return a writable data directory that works in both portable and installed modes.
+    Portable : resolves to <cwd>/data/output  (original behavior)
+    Installed: resolves to %LOCALAPPDATA%/heatWave/output  (avoids Program Files ACL)
+    """
+    program_files = os.environ.get("PROGRAMFILES", "C:\\Program Files")
+    cwd = Path.cwd()
+
+    # If running from inside Program Files, redirect to user-local AppData
+    try:
+        cwd.relative_to(program_files)
+        base = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "heatWave" / "output"
+    except ValueError:
+        # Not inside Program Files — use the original relative path
+        base = cwd / "data" / "output"
+
+    base.mkdir(parents=True, exist_ok=True)
+    return base
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -158,10 +178,11 @@ def initialize_session_state():
 
     if "cleanup_daemon" not in st.session_state:
         st.session_state.cleanup_daemon = start_cleanup_daemon(
-            "data/output",
+            str(get_app_writable_dir()),
             check_interval_minutes=5,
             max_age_hours=1,
         )
+
 
 
 def process_pdf(pdf_file):
