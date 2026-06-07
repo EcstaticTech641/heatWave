@@ -1,10 +1,10 @@
 [Setup]
 AppName=heatWave
-AppVersion=1.0.1
+AppVersion=1.1.0
 DefaultDirName={autopf}\heatWave
 DefaultGroupName=heatWave
 OutputDir=dist
-OutputBaseFilename=heatWave_v1.0.1_setup
+OutputBaseFilename=heatWave_v1.1.0_setup
 Compression=lzma2
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64
