@@ -19,6 +19,7 @@ from src.core.timeline import (
     get_unique_swimmers,
     _format_duration,
 )
+from src.models.schemas import SessionConfig
 from src.utils.cleanup import start_cleanup_daemon, clear_directory, cleanup_old_files
 
 
@@ -148,6 +149,8 @@ def initialize_session_state():
         "start_heat_number": 1,
         "swimmer_search_query": "",
         "selected_swimmer": None,
+        "sessions": [],              # list of session dicts for multi-session mode
+        "multi_session_mode": False, # toggle state
     }
     for key, val in defaults.items():
         if key not in st.session_state:
@@ -447,7 +450,11 @@ def main():
                 meet_start_time = st.text_input(
                     "Session Start Time:",
                     value=st.session_state.meet_start_time,
-                    help="Wall-clock time the session begins, e.g. 8:00 AM",
+                    help=(
+                        "Wall-clock time the meet begins, e.g. 8:00 AM. "
+                        "Used as the single-session start when multi-session mode is off, "
+                        "or as a fallback for events before the first defined session boundary."
+                    ),
                 )
 
             with col4:
@@ -458,8 +465,8 @@ def main():
                     value=int(st.session_state.start_heat_number),
                     step=1,
                     help=(
-                        "Heat number in the first event where the session clock "
-                        "starts. Use 1 for a full-session estimate."
+                        "Heat number in the first event where the session clock starts. "
+                        "Use 1 for a full-session estimate."
                     ),
                 )
 
@@ -478,11 +485,11 @@ def main():
                 )
 
             st.caption(
-                "NT (no-time) heats default to 2 min for events 400Y and under, "
+                "NT (no-time) heats default to 2 min for events ≤400Y, "
                 "or 5 min for longer events."
             )
 
-            # Persist settings
+            # Persist base settings immediately
             st.session_state.meet_title = meet_title
             st.session_state.meet_date = meet_date
             st.session_state.num_lanes = num_lanes
@@ -490,7 +497,134 @@ def main():
             st.session_state.start_heat_number = start_heat_number
             st.session_state.heat_gap_minutes = heat_gap_minutes
 
-            # Preview row
+            # ----------------------------------------------------------------
+            # Multi-Session Configuration
+            # ----------------------------------------------------------------
+            st.markdown("---")
+            st.markdown("### Multi-Session Configuration")
+            st.caption(
+                "Define named sessions (e.g. Morning / Afternoon) with independent "
+                "wall-clock start times. Heat numbers stay continuous across all sessions — "
+                "only the clock resets. Inter-session gaps (lunch, warmup) are implicit."
+            )
+
+            multi_session = st.toggle(
+                "Enable Multi-Session Mode",
+                value=st.session_state.multi_session_mode,
+                key="multi_session_toggle",
+            )
+            st.session_state.multi_session_mode = multi_session
+
+            if multi_session:
+                if st.button("➕ Add Session", key="add_session_btn"):
+                    n = len(st.session_state.sessions) + 1
+                    # Default start_event_num: offset from the last defined session
+                    if st.session_state.sessions:
+                        last_event_num = max(
+                            s["start_event_num"] for s in st.session_state.sessions
+                        )
+                        default_event = last_event_num + 10
+                    else:
+                        default_event = 1
+                    default_time = "8:00 AM" if n == 1 else "1:00 PM"
+                    st.session_state.sessions.append({
+                        "session_name": f"Session {n}",
+                        "start_time": default_time,
+                        "start_event_num": default_event,
+                    })
+                    st.rerun()
+
+                if st.session_state.sessions:
+                    # Column headers
+                    hc1, hc2, hc3, hc4 = st.columns([3, 2, 2, 1])
+                    with hc1:
+                        st.markdown("**Session Name**")
+                    with hc2:
+                        st.markdown("**Wall-Clock Start**")
+                    with hc3:
+                        st.markdown("**First Event #**")
+                    with hc4:
+                        st.markdown("**Del**")
+
+                    delete_idx = None
+                    for i, session in enumerate(st.session_state.sessions):
+                        c1, c2, c3, c4 = st.columns([3, 2, 2, 1])
+                        with c1:
+                            st.session_state.sessions[i]["session_name"] = st.text_input(
+                                "Session Name",
+                                value=session["session_name"],
+                                key=f"sname_{i}",
+                                label_visibility="collapsed",
+                            )
+                        with c2:
+                            st.session_state.sessions[i]["start_time"] = st.text_input(
+                                "Start Time",
+                                value=session["start_time"],
+                                key=f"stime_{i}",
+                                label_visibility="collapsed",
+                                help="e.g. 9:00 AM or 1:30 PM",
+                            )
+                        with c3:
+                            st.session_state.sessions[i]["start_event_num"] = st.number_input(
+                                "Start Event #",
+                                value=int(session["start_event_num"]),
+                                min_value=1,
+                                step=1,
+                                key=f"sevent_{i}",
+                                label_visibility="collapsed",
+                            )
+                        with c4:
+                            if st.button("🗑️", key=f"sdel_{i}", help="Remove this session"):
+                                delete_idx = i
+
+                    # Deferred delete — avoids mid-loop index mutation
+                    if delete_idx is not None:
+                        st.session_state.sessions.pop(delete_idx)
+                        st.rerun()
+
+                    # Validation: duplicate start_event_num check
+                    event_nums = [s["start_event_num"] for s in st.session_state.sessions]
+                    if len(event_nums) != len(set(event_nums)):
+                        st.warning(
+                            "⚠️ Two or more sessions share the same start event number. "
+                            "Resolve before generating."
+                        )
+
+                    # Session coverage summary
+                    st.markdown("**Session Coverage:**")
+                    sorted_sessions = sorted(
+                        st.session_state.sessions, key=lambda s: s["start_event_num"]
+                    )
+                    total_events = len(st.session_state.events)
+                    for idx, s in enumerate(sorted_sessions):
+                        if idx + 1 < len(sorted_sessions):
+                            end_label = f"Event {sorted_sessions[idx + 1]['start_event_num'] - 1}"
+                        else:
+                            end_label = f"Event {total_events} (end)"
+                        st.markdown(
+                            f"- **{s['session_name']}** — starts {s['start_time']}, "
+                            f"Events {s['start_event_num']}–{end_label}"
+                        )
+
+                else:
+                    st.info(
+                        "No sessions defined yet. Click **➕ Add Session** to get started."
+                    )
+
+            else:
+                # Multi-session off — surface any lingering definitions so they're visible
+                if st.session_state.sessions:
+                    st.caption(
+                        f"ℹ️ {len(st.session_state.sessions)} session(s) are defined but "
+                        "multi-session mode is off — they will be ignored at generation time."
+                    )
+                    if st.button("🗑️ Clear All Sessions", key="clear_sessions_btn"):
+                        st.session_state.sessions = []
+                        st.rerun()
+
+            # ----------------------------------------------------------------
+            # Current Settings Summary
+            # ----------------------------------------------------------------
             st.markdown("---")
             st.markdown("### Current Settings")
             col_a, col_b, col_c, col_d, col_e = st.columns(5)
@@ -501,9 +635,18 @@ def main():
             with col_c:
                 st.markdown(f"**Lanes:** {num_lanes}")
             with col_d:
-                st.markdown(f"**Start:** {meet_start_time}")
+                if multi_session and st.session_state.sessions:
+                    first_s = min(
+                        st.session_state.sessions, key=lambda s: s["start_event_num"]
+                    )
+                    st.markdown(f"**Start:** {first_s['start_time']} *(S1)*")
+                else:
+                    st.markdown(f"**Start:** {meet_start_time}")
             with col_e:
-                st.markdown(f"**Gap:** {heat_gap_minutes} min")
+                if multi_session and st.session_state.sessions:
+                    st.markdown(f"**Sessions:** {len(st.session_state.sessions)}")
+                else:
+                    st.markdown(f"**Gap:** {heat_gap_minutes} min")
 
     # ========================================================================
     # TAB 4: GENERATE
@@ -523,6 +666,12 @@ def main():
 
             events = st.session_state.events
 
+            session_mode_label = (
+                f"{len(st.session_state.sessions)} sessions defined"
+                if st.session_state.get("multi_session_mode") and st.session_state.get("sessions")
+                else "Single session"
+            )
+
             st.markdown(f"""
             ### Ready to Generate Heat Sheets
 
@@ -532,6 +681,7 @@ def main():
             - Lanes: {num_lanes}
             - Events: {len(events)}
             - Total Entries: {sum(len(e.entries) for e in events)}
+            - Session Mode: {session_mode_label}
             - Session Start: {meet_start} (Heat {start_heat})
             - Heat Gap: {heat_gap} min
             """)
@@ -545,12 +695,25 @@ def main():
                 if heat_sheets:
                     st.session_state.heat_sheets = heat_sheets
 
+                    # Build SessionConfig list if multi-session mode is active
+                    sessions_configs = None
+                    if st.session_state.get("multi_session_mode") and st.session_state.get("sessions"):
+                        sessions_configs = [
+                            SessionConfig(
+                                session_name=s["session_name"],
+                                start_time=s["start_time"],
+                                start_event_num=s["start_event_num"],
+                            )
+                            for s in st.session_state.sessions
+                        ]
+
                     # Compute timeline immediately after seeding
                     timeline = estimate_meet_timeline(
                         heat_sheets,
                         gap_minutes=heat_gap,
                         meet_start_time=meet_start,
                         start_heat_number=start_heat,
+                        sessions=sessions_configs,
                     )
                     st.session_state.timeline = timeline
 

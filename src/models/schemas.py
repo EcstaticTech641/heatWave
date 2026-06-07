@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Union
 
 class Swimmer(BaseModel):
@@ -43,6 +43,7 @@ class HeatSheet(BaseModel):
 
 
 class SessionConfig(BaseModel):
-    session_name: str
-    start_time: str       # wall-clock string, e.g. "9:00 AM"
-    start_event_num: int  # first event number belonging to this session (inclusive)
+    """Configuration for a multi-session meet schedule."""
+    start_event_num: int = Field(..., description="First event number assigned to this session")
+    start_time: str = Field(default="8:00 AM", description="Wall-clock start time, e.g. '8:00 AM'")
+    session_name: str = Field(default="", description="Display name for this session, e.g. 'Morning Session'")

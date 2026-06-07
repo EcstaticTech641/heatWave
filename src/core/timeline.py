@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from src.models.schemas import HeatSheet, Entry, RelayEntry
+from src.models.schemas import HeatSheet, Entry, RelayEntry, SessionConfig
 
 
 # ---------------------------------------------------------------------------
@@ -31,9 +31,10 @@ from src.models.schemas import HeatSheet, Entry, RelayEntry
 class HeatTimeline:
     """Timing data for a single heat."""
     heat_number: int
-    est_start_minutes: float      # cumulative minutes from meet clock-zero
-    est_duration_minutes: float   # derived from the slowest timed seed
-    est_start_wall: str           # wall-clock string, e.g. "9:14 AM"
+    est_start_minutes: float       # cumulative minutes from this session's clock-zero
+    est_duration_minutes: float    # derived from the slowest timed seed
+    est_start_wall: str            # wall-clock string, e.g. "9:14 AM"
+    session_name: str = ""         # populated when sessions are defined
 
 
 @dataclass
@@ -41,6 +42,7 @@ class EventTimeline:
     """Timing data for all heats in one event."""
     event_number: int
     event_name: str
+    session_name: str = ""         # populated when sessions are defined
     heats: List[HeatTimeline] = field(default_factory=list)
 
     @property
@@ -61,10 +63,11 @@ class EventTimeline:
 
 @dataclass
 class MeetTimeline:
-    """Complete timeline for a meet session."""
+    """Complete timeline for a meet — single or multi-session."""
     events: List[EventTimeline] = field(default_factory=list)
-    total_duration_minutes: float = 0.0
-    meet_start_wall: str = "8:00 AM"
+    total_duration_minutes: float = 0.0   # sum of all session active times, gaps excluded
+    meet_start_wall: str = "8:00 AM"      # first session's start time
+    sessions: List[SessionConfig] = field(default_factory=list)
 
     def format_total(self) -> str:
         """Return total duration as a human-readable string, e.g. '2h 14m'."""
@@ -143,31 +146,94 @@ def estimate_meet_timeline(
     gap_minutes: float = 2.0,
     meet_start_time: str = "8:00 AM",
     start_heat_number: int = 1,
+    sessions: Optional[List[SessionConfig]] = None,
 ) -> MeetTimeline:
     """
     Compute estimated start times and durations for every heat across a meet.
 
+    Single-session behavior (sessions=None or []):
+        Identical to the previous implementation — one clock running from
+        meet_start_time through all events.
+
+    Multi-session behavior:
+        Sessions are sorted by start_event_num. When the engine crosses a
+        session boundary, base_dt resets to the new session's start_time and
+        cursor_minutes resets to 0.0. Heat numbers are never reset — they
+        thread globally across all sessions from the upstream seeder.
+
+        Inter-session gaps (lunch breaks, warmup, etc.) are implicit: they are
+        the delta between Session N's last calculated wall-clock time and
+        Session N+1's user-defined start_time. The engine does not model them.
+
     Args:
         heat_sheets:       Ordered list of HeatSheet objects (one per event).
-        gap_minutes:       Minutes added *between* heats (check-in buffer).
-        meet_start_time:   Wall-clock time the session begins, e.g. "8:00 AM".
-        start_heat_number: Heat number at which the session starts (default 1).
-                           Heats before this number in the first event are skipped
-                           from the timeline (edge case: always 1 for full meets).
+        gap_minutes:       Minutes added between heats (check-in buffer).
+        meet_start_time:   Fallback/single-session start time, e.g. "8:00 AM".
+        start_heat_number: Reserved for future partial-meet support (unused in
+                           current multi-session path).
+        sessions:          Optional list of SessionConfig. If None or empty,
+                           single-session mode — existing behavior is preserved.
 
     Returns:
-        MeetTimeline with per-event, per-heat timing data.
+        MeetTimeline with per-event, per-heat timing data tagged by session.
+        total_duration_minutes reflects the sum of all session active times,
+        excluding inter-session gaps.
     """
-    base_dt = _parse_meet_start(meet_start_time)
-    cursor_minutes = 0.0  # running clock, minutes since session start
+    # --- Normalize sessions ---
+    sessions_sorted: List[SessionConfig] = []
+    if sessions:
+        sessions_sorted = sorted(sessions, key=lambda s: s.start_event_num)
 
-    timeline = MeetTimeline(meet_start_wall=meet_start_time)
+    def _get_session_for_event(event_num: int) -> Optional[SessionConfig]:
+        """Return the SessionConfig whose boundary covers this event, or None."""
+        matched: Optional[SessionConfig] = None
+        for s in sessions_sorted:
+            if s.start_event_num <= event_num:
+                matched = s
+            else:
+                break
+        return matched
+
+    # --- Clock state ---
+    base_dt: datetime = _parse_meet_start(
+        sessions_sorted[0].start_time if sessions_sorted else meet_start_time
+    )
+    cursor_minutes: float = 0.0
+    current_session_name: str = ""
+
+    # Accumulates active time from completed sessions (trailing gap already removed).
+    # Used to compute total_duration_minutes correctly across resets.
+    completed_session_minutes: float = 0.0
+
+    timeline = MeetTimeline(
+        meet_start_wall=sessions_sorted[0].start_time if sessions_sorted else meet_start_time,
+        sessions=sessions_sorted,
+    )
 
     for heat_sheet in heat_sheets:
         event = heat_sheet.event
+
+        # --- Session boundary detection ---
+        session = _get_session_for_event(event.number) if sessions_sorted else None
+        session_label = session.session_name if session else ""
+
+        if session is not None and session.session_name != current_session_name:
+            if current_session_name:
+                # A previous session was active — save its active time before reset.
+                # cursor_minutes currently ends with a trailing gap from the last heat;
+                # subtract it so we only count actual race time + within-session gaps.
+                completed_session_minutes += max(cursor_minutes - gap_minutes, 0.0)
+
+            # Reset clock to this session's wall-clock origin
+            base_dt = _parse_meet_start(session.start_time)
+            cursor_minutes = 0.0
+            current_session_name = session.session_name
+
+        # --- Build EventTimeline ---
         event_tl = EventTimeline(
             event_number=event.number,
             event_name=f"Event {event.number}: {event.gender} {event.distance}Y {event.stroke}",
+            session_name=session_label,
         )
 
         # Group assignments by heat number
@@ -180,7 +246,7 @@ def estimate_meet_timeline(
         for heat_num in sorted(heats_map.keys()):
             assignments = heats_map[heat_num]
 
-            # Find the slowest timed seed (largest seconds value) in this heat
+            # Find the slowest timed seed in this heat
             worst_seconds: Optional[float] = None
             for assignment in assignments:
                 entry = assignment.entry
@@ -190,33 +256,31 @@ def estimate_meet_timeline(
                     if worst_seconds is None or secs > worst_seconds:
                         worst_seconds = secs
 
-            if worst_seconds is not None:
-                heat_duration_minutes = worst_seconds / 60.0
-            else:
-                heat_duration_minutes = nt_fallback
+            heat_duration_minutes = (
+                worst_seconds / 60.0 if worst_seconds is not None else nt_fallback
+            )
 
             heat_tl = HeatTimeline(
                 heat_number=heat_num,
                 est_start_minutes=cursor_minutes,
                 est_duration_minutes=heat_duration_minutes,
                 est_start_wall=_wall_clock(base_dt, cursor_minutes),
+                session_name=session_label,
             )
             event_tl.heats.append(heat_tl)
 
-            # Advance the clock: this heat's duration + gap
             cursor_minutes += heat_duration_minutes + gap_minutes
 
         timeline.events.append(event_tl)
 
-    # Total duration is cursor minus the final gap (no gap after the last heat)
-    # Add the last heat's duration back without the trailing gap
+    # --- Total duration ---
+    # Remove the trailing gap appended after the final heat, then add to completed sessions.
     if timeline.events:
         last_event = timeline.events[-1]
         if last_event.heats:
-            last_heat = last_event.heats[-1]
-            # cursor already includes last heat duration + gap, so subtract gap
             cursor_minutes -= gap_minutes
-    timeline.total_duration_minutes = cursor_minutes
+
+    timeline.total_duration_minutes = completed_session_minutes + cursor_minutes
 
     return timeline
 

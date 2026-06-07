@@ -13,6 +13,58 @@ from src.models.schemas import HeatSheet, Entry, RelayEntry
 from src.core.timeline import MeetTimeline, _format_duration
 
 
+def _build_session_header_elements(
+    session_name: str,
+    start_wall: str,
+    styles,
+) -> list:
+    """
+    Build ReportLab elements for a session divider block.
+    Injected before the first event of each new session in the full-meet PDF.
+    Returns a list of elements ready to extend into the main elements list.
+    """
+    out = []
+
+    banner_para = Paragraph(
+        f"<b>{session_name}</b>",
+        ParagraphStyle(
+            "SHBanner",
+            parent=styles["Normal"],
+            fontSize=13,
+            textColor=colors.white,
+            alignment=1,
+        ),
+    )
+    banner_table = Table([[banner_para]], colWidths=[6.5 * inch])
+    banner_table.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#1f77b4")),
+        ("TOPPADDING",    (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 12),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 12),
+        ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    out.append(banner_table)
+
+    if start_wall:
+        out.append(Paragraph(
+            f"Start Time: {start_wall}",
+            ParagraphStyle(
+                "SHSub",
+                parent=styles["Normal"],
+                fontSize=9,
+                textColor=colors.HexColor("#555555"),
+                alignment=1,
+                spaceBefore=4,
+                spaceAfter=10,
+            ),
+        ))
+
+    out.append(Spacer(1 * inch, 0.1 * inch))
+    return out
+
+
 def generate_heat_sheet_pdf(
     heat_sheet: HeatSheet,
     output_path: str,
@@ -84,19 +136,33 @@ def generate_heat_sheet_pdf(
         event_style
     ))
 
-    # Timeline line (if available)
+# Session tag + timing line (if timeline available)
     if timeline:
         event_tl = next(
             (e for e in timeline.events if e.event_number == event.number), None
         )
+        # Session tag — shown when event belongs to a named session
+        if event_tl and event_tl.session_name:
+            elements.append(Paragraph(
+                event_tl.session_name,
+                ParagraphStyle(
+                    "SessionTag",
+                    parent=styles["Normal"],
+                    fontSize=8,
+                    textColor=colors.HexColor("#1f77b4"),
+                    alignment=1,
+                    spaceAfter=2,
+                ),
+            ))
+        # Timing line
         if event_tl and event_tl.heats:
             first_heat = event_tl.heats[0]
             total_event_dur = sum(h.est_duration_minutes for h in event_tl.heats)
             timing_style = ParagraphStyle(
-                'TimingLine',
-                parent=styles['Normal'],
+                "TimingLine",
+                parent=styles["Normal"],
                 fontSize=8,
-                textColor=colors.HexColor('#888888'),
+                textColor=colors.HexColor("#888888"),
                 spaceAfter=4,
                 alignment=1,
             )
@@ -294,14 +360,55 @@ def generate_full_meet_pdf(
     elements.append(Paragraph("Heat Sheets", subtitle_style))
     elements.append(Paragraph(f"Date: {meet_date}", subtitle_style))
     elements.append(Paragraph(f"Total Events: {len(heat_sheets)}", cover_style))
+
+    # Session listing on cover (multi-session meets only)
+    if timeline and timeline.sessions:
+        session_list_style = ParagraphStyle(
+            "SessionListItem",
+            parent=styles["Normal"],
+            fontSize=10,
+            textColor=colors.HexColor("#555555"),
+            alignment=1,
+            spaceAfter=4,
+        )
+        elements.append(Spacer(1 * inch, 0.1 * inch))
+        for s in sorted(timeline.sessions, key=lambda x: x.start_event_num):
+            elements.append(Paragraph(
+                f"{s.session_name}  —  {s.start_time}  (Events from #{s.start_event_num})",
+                session_list_style,
+            ))
+
     elements.append(PageBreak())
     
+
     # Add each event
+    current_session_name: str = ""
+
     for event_idx, heat_sheet in enumerate(heat_sheets):
         event = heat_sheet.event
-        
+
+        # --- Session boundary detection ---
+        # Inject a full-width session header block when the session changes.
+        # The block lands naturally on the new page opened by the prior event's PageBreak.
+        if timeline:
+            event_tl_s = next(
+                (e for e in timeline.events if e.event_number == event.number), None
+            )
+            if event_tl_s and event_tl_s.session_name and \
+                    event_tl_s.session_name != current_session_name:
+                current_session_name = event_tl_s.session_name
+                session_start_wall = (
+                    event_tl_s.heats[0].est_start_wall if event_tl_s.heats else ""
+                )
+                elements.extend(
+                    _build_session_header_elements(
+                        current_session_name, session_start_wall, styles
+                    )
+                )
+
         # Event header
         elements.append(Paragraph(meet_title, ParagraphStyle(
+
             'EventHeader',
             parent=styles['Normal'],
             fontSize=10,
