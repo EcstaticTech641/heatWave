@@ -29,6 +29,8 @@ class Event(BaseModel):
     distance: int
     stroke: str
     entries: List[Entry | RelayEntry] = []
+    layout_confidence_low: bool = False   # Sparse page detected; previous boundary map used
+    auto_layout_failed: bool = False      # Histogram produced 0 or >3 columns with no fallback
 
 
 class LaneAssignment(BaseModel):

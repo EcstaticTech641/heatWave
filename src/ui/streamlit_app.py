@@ -11,7 +11,11 @@ from pathlib import Path
 import streamlit as st
 from datetime import datetime
 
-from src.parser.extractor import extract_text_from_pdf, parse_events_from_text
+from src.parser.extractor import (
+    extract_text_from_pdf,
+    parse_events_from_text,
+    parse_pdf_via_spatial_engine,
+)
 from src.seeding.seeder import seed_event, format_heat_sheet
 from src.core.pdf_generator import generate_full_meet_pdf, generate_heat_sheet_pdf
 from src.core.timeline import (
@@ -171,6 +175,9 @@ def initialize_session_state():
         "selected_swimmer": None,
         "sessions": [],              # list of session dicts for multi-session mode
         "multi_session_mode": False, # toggle state
+        # Phase 6 — spatial layout flags
+        "auto_layout_failed": False,  # True when histogram produced no usable boundaries
+        "pdf_bytes_for_retry": None,  # Raw uploaded bytes kept in memory for column override retry
     }
     for key, val in defaults.items():
         if key not in st.session_state:
@@ -185,25 +192,71 @@ def initialize_session_state():
 
 
 
-def process_pdf(pdf_file):
-    """Process uploaded PDF and extract events."""
+def process_pdf(pdf_file, column_override: int | None = None):
+    """Process uploaded PDF through the spatial layout engine and extract events.
+
+    Stores the raw uploaded bytes in session state so the user can re-process
+    with a manual column override without re-uploading the file.
+
+    Args:
+        pdf_file: The Streamlit UploadedFile object.
+        column_override: Optional 1/2/3 to force a specific column layout,
+            bypassing histogram detection entirely.
+
+    Returns:
+        Tuple of (events, raw_bytes) where raw_bytes are the original PDF bytes.
+    """
     try:
+        raw_bytes = pdf_file.getbuffer().tobytes()
+        # Store bytes in session state for potential retry with column_override
+        st.session_state.pdf_bytes_for_retry = raw_bytes
+
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-            tmp_file.write(pdf_file.getbuffer())
+            tmp_file.write(raw_bytes)
             tmp_path = tmp_file.name
 
-        with st.spinner("Extracting text from PDF..."):
-            text = extract_text_from_pdf(tmp_path)
+        with st.spinner("Analyzing layout and parsing events..."):
+            events = parse_pdf_via_spatial_engine(tmp_path, column_override=column_override)
 
-        with st.spinner("Parsing events and entries..."):
-            events = parse_events_from_text(text)
-
-        Path(tmp_path).unlink()
-        return events, text
+        Path(tmp_path).unlink(missing_ok=True)
+        return events, raw_bytes
 
     except Exception as e:
         st.error(f"Error processing PDF: {str(e)}")
         return None, None
+
+
+def reprocess_pdf_with_override(column_override: int) -> list:
+    """Re-run the spatial engine using bytes already stored in session state.
+
+    Called by the manual column-override retry button.  Saves the in-memory
+    bytes to a fresh temp file rather than keeping the original descriptor alive
+    across Streamlit reruns.
+
+    Args:
+        column_override: 1, 2, or 3 — forces the corresponding column layout.
+
+    Returns:
+        List of Event objects, or empty list on failure.
+    """
+    raw_bytes = st.session_state.get("pdf_bytes_for_retry")
+    if not raw_bytes:
+        st.error("No PDF bytes available for retry. Please re-upload the file.")
+        return []
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+            tmp_file.write(raw_bytes)
+            tmp_path = tmp_file.name
+
+        with st.spinner(f"Re-processing with {column_override}-column layout..."):
+            events = parse_pdf_via_spatial_engine(tmp_path, column_override=column_override)
+
+        Path(tmp_path).unlink(missing_ok=True)
+        return events
+
+    except Exception as e:
+        st.error(f"Error re-processing PDF: {str(e)}")
+        return []
 
 
 def seed_all_events(events, num_lanes):
@@ -270,6 +323,7 @@ def generate_pdfs(heat_sheets, meet_title, meet_date, num_lanes, timeline=None):
 # ============================================================================
 def main():
     initialize_session_state()
+    events = st.session_state.events
 
     # Header
     st.markdown('<div class="main-header"> heatWave</div>', unsafe_allow_html=True)
@@ -308,7 +362,7 @@ def main():
             st.info(f"Size: **{uploaded_file.size / 1024:.1f} KB**")
 
             if st.button("Parse PDF", type="primary", width='stretch'):
-                events, text = process_pdf(uploaded_file)
+                events, _raw = process_pdf(uploaded_file)
 
                 if events:
                     st.session_state.events = events
@@ -317,6 +371,10 @@ def main():
                     st.session_state.heat_sheets = None
                     st.session_state.timeline = None
                     st.session_state.selected_swimmer = None
+
+                    # Propagate layout flags into session state
+                    auto_layout_failed = any(e.auto_layout_failed for e in events)
+                    st.session_state.auto_layout_failed = auto_layout_failed
 
                     st.markdown(
                         '<div class="success-box">PDF parsed successfully!</div>',
@@ -343,7 +401,37 @@ def main():
                     with col_d:
                         st.metric("Total Entries", total_entries)
 
-                    st.success("Ready to seed heats! Go to the **Settings** tab to customize.")
+                    # --------------------------------------------------------
+                    # Phase 6.4 — Manual column override safety net
+                    # Rendered only when the histogram could not determine
+                    # column structure automatically.
+                    # --------------------------------------------------------
+                    if st.session_state.get("auto_layout_failed", False):
+                        st.error(
+                            "⚠️ Layout analyzer could not determine column structure "
+                            "automatically. Please select the column format manually below."
+                        )
+                        manual_columns = st.radio(
+                            "Select column format manually:",
+                            options=[1, 2, 3],
+                            index=1,
+                            key="manual_col_radio",
+                            help=(
+                                "1 = single column, "
+                                "2 = standard two-column (most Hy-Tek sheets), "
+                                "3 = three-column championship format"
+                            ),
+                        )
+                        if st.button("Re-process Document", key="reprocess_btn", type="primary"):
+                            retried_events = reprocess_pdf_with_override(manual_columns)
+                            if retried_events:
+                                st.session_state.events = retried_events
+                                st.session_state.auto_layout_failed = False
+                                st.session_state.heat_sheets = None
+                                st.session_state.timeline = None
+                                st.rerun()
+                    else:
+                        st.success("Ready to seed heats! Go to the **Settings** tab to customize.")
 
         # Reset state button
         if st.session_state.events is not None:
@@ -726,8 +814,6 @@ def main():
             heat_gap = float(st.session_state.get("heat_gap_minutes", 2.0))
             meet_start = st.session_state.get("meet_start_time", "8:00 AM")
             start_heat = int(st.session_state.get("start_heat_number", 1))
-
-            events = st.session_state.events
 
             session_mode_label = (
                 f"{len(st.session_state.sessions)} sessions defined"
