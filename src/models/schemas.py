@@ -10,12 +10,17 @@ class Entry(BaseModel):
     place: int
     swimmer: Swimmer
     seed_time: str
+    low_confidence: bool = False
+    error_msg: str = ""
     
 class RelayEntry(BaseModel):
     place: int
     team_name: str
     seed_time: str
     swimmers: Optional[List[str]] = None
+    low_confidence: bool = False
+    error_msg: str = ""
+
 
 class Event(BaseModel):
     number: int

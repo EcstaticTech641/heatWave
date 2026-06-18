@@ -366,8 +366,15 @@ def main():
         if st.session_state.events is None:
             st.info("Upload and parse a PDF first to see the preview.")
         else:
-            events = st.session_state.events
             st.markdown(f"### {len(events)} Events Found")
+            # Check for low confidence entries
+
+            low_conf_count = sum(1 for e in events for entry in e.entries if getattr(entry, "low_confidence", False))
+            if low_conf_count > 0:
+                st.warning(
+                    f"⚠️ **Warning:** {low_conf_count} entries have been flagged as low-confidence due to potential parsing errors. "
+                    "You can edit these entries directly in the tables below."
+                )
 
             col1, col2 = st.columns(2)
             with col1:
@@ -385,7 +392,7 @@ def main():
                         (event_type_filter == "Individual"
                          and e.entries and hasattr(e.entries[0], "swimmer"))
                         or (event_type_filter == "Relay"
-                            and e.entries and not hasattr(e.entries[0], "swimmer"))
+                             and e.entries and not hasattr(e.entries[0], "swimmer"))
                     )
                 ]
             if search_query:
@@ -395,6 +402,7 @@ def main():
                 ]
 
             for event in filtered_events[:10]:
+                is_relay = event.entries and not hasattr(event.entries[0], "swimmer")
                 with st.expander(
                     f"Event {event.number}: {event.gender} {event.distance}Y "
                     f"{event.stroke} ({len(event.entries)} entries)"
@@ -407,18 +415,52 @@ def main():
                     with col3:
                         st.markdown(f"**Entries:** {len(event.entries)}")
 
-                    st.markdown("**Sample Entries:**")
-                    for entry in event.entries[:5]:
-                        if hasattr(entry, "swimmer"):
-                            st.markdown(
-                                f"- {entry.swimmer.name} ({entry.swimmer.age}yo, "
-                                f"{entry.swimmer.team_code}) - {entry.seed_time}"
-                            )
-                        else:
-                            st.markdown(f"- {entry.team_name} - {entry.seed_time}")
+                    st.markdown("**Editable Entries:**")
+                    if is_relay:
+                        rows = []
+                        for entry in event.entries:
+                            rows.append({
+                                "Place": entry.place,
+                                "Team Name": entry.team_name,
+                                "Seed Time": entry.seed_time,
+                                "Low Confidence": entry.low_confidence,
+                                "Error Msg": entry.error_msg
+                            })
+                        import pandas as pd
+                        df = pd.DataFrame(rows)
+                        edited_df = st.data_editor(df, key=f"editor_{event.number}", hide_index=True)
+                        for i, row in edited_df.iterrows():
+                            entry = event.entries[i]
+                            entry.place = int(row["Place"])
+                            entry.team_name = str(row["Team Name"])
+                            entry.seed_time = str(row["Seed Time"])
+                            entry.low_confidence = bool(row["Low Confidence"])
+                            entry.error_msg = str(row["Error Msg"])
+                    else:
+                        rows = []
+                        for entry in event.entries:
+                            rows.append({
+                                "Place": entry.place,
+                                "Name": entry.swimmer.name,
+                                "Age": entry.swimmer.age,
+                                "Team Code": entry.swimmer.team_code,
+                                "Seed Time": entry.seed_time,
+                                "Low Confidence": entry.low_confidence,
+                                "Error Msg": entry.error_msg
+                            })
+                        import pandas as pd
+                        df = pd.DataFrame(rows)
+                        edited_df = st.data_editor(df, key=f"editor_{event.number}", hide_index=True)
+                        for i, row in edited_df.iterrows():
+                            entry = event.entries[i]
+                            entry.place = int(row["Place"])
+                            entry.seed_time = str(row["Seed Time"])
+                            entry.low_confidence = bool(row["Low Confidence"])
+                            entry.error_msg = str(row["Error Msg"])
+                            entry.swimmer.name = str(row["Name"])
+                            entry.swimmer.age = int(row["Age"]) if row["Age"] is not None and str(row["Age"]).isdigit() else None
+                            entry.swimmer.team_code = str(row["Team Code"])
 
-                    if len(event.entries) > 5:
-                        st.caption(f"... and {len(event.entries) - 5} more entries")
 
             if len(filtered_events) > 10:
                 st.caption(
