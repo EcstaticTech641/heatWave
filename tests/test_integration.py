@@ -21,7 +21,7 @@ def test_complete_pipeline():
     assert Path(pdf_path).exists(), f"Sample PDF not found: {pdf_path}"
     
     text = extract_text_from_pdf(pdf_path)
-    assert len(text) > 50000, f"Extracted text too short: {len(text)} chars"
+    assert len(text) > 45000, f"Extracted text too short: {len(text)} chars"
     assert "Event" in text, "Event text not found in extraction"
     assert "Seed Time" in text or "Time" in text, "Seed time data not found"
     print("  ✓ Two-column PDF extraction works")

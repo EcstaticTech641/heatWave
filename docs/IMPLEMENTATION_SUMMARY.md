@@ -270,4 +270,13 @@ This would transform the pipeline from a Python library into a user-friendly app
 
 ---
 
-**Status:**  Core pipeline production-ready and fully functional
+## NCAA & Championship Parser Updates (v1.1.2)
+
+- **Collegiate Support:** Captures swimmer class years (`FR`, `SO`, `JR`, `SR`, `GR`, `GS`).
+- **Alphanumeric Events:** Supports alphanumeric event IDs/labels (e.g. `41X`) and processes exhibition statuses (`X` / `XNT`).
+- **Relays & Diving:** Properly parses collegiate relays and preserves raw diving scores/exhibition statuses.
+- **Factory Routing:** Features automatic routing of collegiate sheets to the `NCAACollegeParser` via signature anchors.
+
+---
+
+**Status:** Core pipeline and NCAA/Championship features production-ready and fully functional.

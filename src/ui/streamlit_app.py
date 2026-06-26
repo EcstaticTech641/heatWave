@@ -300,7 +300,8 @@ def generate_pdfs(heat_sheets, meet_title, meet_date, num_lanes, timeline=None):
             with st.spinner("Generating individual event PDFs..."):
                 for heat_sheet in heat_sheets:
                     event = heat_sheet.event
-                    pdf_path = tmpdir / f"Event_{event.number:02d}_Heatsheet.pdf"
+                    lbl = event.event_label if event.event_label else f"{event.number:02d}"
+                    pdf_path = tmpdir / f"Event_{lbl}_Heatsheet.pdf"
                     generate_heat_sheet_pdf(
                         heat_sheet,
                         str(pdf_path),
@@ -309,7 +310,7 @@ def generate_pdfs(heat_sheets, meet_title, meet_date, num_lanes, timeline=None):
                         timeline=timeline,
                     )
                     with open(pdf_path, "rb") as f:
-                        individual_pdfs[event.number] = f.read()
+                        individual_pdfs[event.event_label or event.number] = f.read()
 
             return full_pdf_content, individual_pdfs
 
@@ -492,7 +493,7 @@ def main():
             for event in filtered_events[:10]:
                 is_relay = event.entries and not hasattr(event.entries[0], "swimmer")
                 with st.expander(
-                    f"Event {event.number}: {event.gender} {event.distance}Y "
+                    f"Event {event.event_label or event.number}: {event.gender} {event.distance}Y "
                     f"{event.stroke} ({len(event.entries)} entries)"
                 ):
                     col1, col2, col3 = st.columns(3)
@@ -516,7 +517,7 @@ def main():
                             })
                         import pandas as pd
                         df = pd.DataFrame(rows)
-                        edited_df = st.data_editor(df, key=f"editor_{event.number}", hide_index=True)
+                        edited_df = st.data_editor(df, key=f"editor_{event.number}_{events.index(event)}", hide_index=True)
                         for i, row in edited_df.iterrows():
                             entry = event.entries[i]
                             entry.place = int(row["Place"])
@@ -538,7 +539,7 @@ def main():
                             })
                         import pandas as pd
                         df = pd.DataFrame(rows)
-                        edited_df = st.data_editor(df, key=f"editor_{event.number}", hide_index=True)
+                        edited_df = st.data_editor(df, key=f"editor_{event.number}_{events.index(event)}", hide_index=True)
                         for i, row in edited_df.iterrows():
                             entry = event.entries[i]
                             entry.place = int(row["Place"])
@@ -902,7 +903,7 @@ def main():
                         for heat_sheet in heat_sheets[:5]:
                             event = heat_sheet.event
                             st.markdown(
-                                f"**Event {event.number}: {event.gender} "
+                                f"**Event {event.event_label or event.number}: {event.gender} "
                                 f"{event.distance}Y {event.stroke}**"
                             )
                             heats_by_num = {}
@@ -965,13 +966,14 @@ def main():
                     event = heat_sheet.event
                     with cols[idx % len(cols)]:
                         if st.button(
-                            f"Event {event.number}",
+                            f"Event {event.event_label or event.number}",
                             width='stretch',
-                            key=f"save_event_{event.number}",
+                            key=f"save_event_{event.event_label or event.number}_{idx}",
                         ):
-                            with st.spinner(f"Saving Event {event.number}..."):
+                            with st.spinner(f"Saving Event {event.event_label or event.number}..."):
                                 try:
-                                    out_path = downloads / f"Event_{event.number:02d}_Heatsheet.pdf"
+                                    lbl = event.event_label if event.event_label else f"{event.number:02d}"
+                                    out_path = downloads / f"Event_{lbl}_Heatsheet.pdf"
                                     generate_heat_sheet_pdf(
                                         heat_sheet,
                                         str(out_path),
@@ -989,7 +991,7 @@ def main():
     with tab5:
         st.header("Find Swimmer")
 
-        if not has_heat_sheets or st.session_state.heat_sheets is None:
+        if st.session_state.heat_sheets is None:
             st.info(
                 "Generate heat sheets first (Generate tab) to use the swimmer lookup."
             )

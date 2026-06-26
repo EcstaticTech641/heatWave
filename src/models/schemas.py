@@ -4,6 +4,7 @@ from typing import List, Optional, Union
 class Swimmer(BaseModel):
     name: str
     age: Optional[int] = None
+    year: Optional[str] = None       # FR, SO, JR, SR, GR, GS
     team_code: str
 
 class Entry(BaseModel):
@@ -24,6 +25,7 @@ class RelayEntry(BaseModel):
 
 class Event(BaseModel):
     number: int
+    event_label: Optional[str] = None   # raw label for non-numeric event IDs like "41X"
     name: str
     gender: str
     distance: int
@@ -31,6 +33,7 @@ class Event(BaseModel):
     entries: List[Entry | RelayEntry] = []
     layout_confidence_low: bool = False   # Sparse page detected; previous boundary map used
     auto_layout_failed: bool = False      # Histogram produced 0 or >3 columns with no fallback
+    is_exhibition: bool = False         # True for "X"-suffixed exhibition events
 
 
 class LaneAssignment(BaseModel):

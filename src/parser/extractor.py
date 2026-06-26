@@ -11,6 +11,25 @@ HYTEK_ATHLETE_RE = r"^\s*(\d+)\s+([A-Za-z\s,\.]+)\s+(\d{1,2})\s+([A-Z0-9\-]+)\s+
 TEAMUNIFY_EVENT_RE = r"(?:Event|#)\s*(\d+)\s+(Girls|Boys|Men|Women|Mixed)\s+(.+?)\s+(\d+)\s+(Free|Back|Breast|Fly|IM|Medley|FR)"
 TEAMUNIFY_ATHLETE_RE = r"^\s*(\d+)\s+([A-Za-z\s,\.]+)\s+(\d{1,2})\s+([A-Z0-9\-]+)\s+(\d{1,2}:\d{2}\.\d{2}|\d{2}\.\d{2}|NT)([YLS]|$)"
 
+# NCAA / Championship Regular Expressions
+NCAA_EVENT_HEADER_RE = (
+    r"Event\s+(\d+)(X)?\s+"
+    r"(Girls|Boys|Women|Men|Mixed)\s+"
+    r"(?:"
+        r"(.*?)\s*(\d+)\s+Yard\s+(.+?)(?:\s+Relay)?(?:\s+(?:NCAA|D2|D3|Division|Official).*|)?\s*$"   # standard swim event
+        r"|"
+        r"(\d+(?:\.\d+)?)\s*(?:mtr|m)\s+(Diving)(?:\s+(?:NCAA|D2|D3|Division|Official).*|)?\s*$"        # diving event: "3 mtr Diving..."
+    r")"
+)
+NCAA_ATHLETE_RE = r"^\s*(\d+)\s+([A-Za-z\s,\.'\-]+?)\s+(FR|SO|JR|SR|GR|GS|[0-9]{1,2})\s+([A-Za-z0-9\-]+)\s+([Xx]?\d{1,2}:\d{2}\.\d{2}|[Xx]?\d{2}\.\d{2}|[Xx]?NT)\s*([A-Z\*]*)\s*$"
+NCAA_DIVE_RE = r"^\s*(\d+)\s+([A-Za-z\s,\.'\-]+?)\s+(FR|SO|JR|SR|GR|GS|[0-9]{1,2})\s+([A-Za-z0-9\-]+)\s+([Xx]?\d+\.\d{2}|NP|NT)\s*$"
+NCAA_RELAY_RE = r"^\s*(\d+)\s+([A-Za-z0-9\-\.\s]+?)\s+([A-Z])\s+([Xx]?\d{1,2}:\d{2}\.\d{2}|[Xx]?NT)\s*([A-Z\*]*)\s*$"
+
+NCAA_ANCHOR_INDIVIDUAL_RE = r"\bYr\b.*\bName\b.*\bSchool\b|\bName\b.*\bYr\b.*\bSchool\b"
+NCAA_ANCHOR_RELAY_RE = r"\bTeam\b.*\bRelay\b.*\bSeed\b"
+NCAA_ANCHOR_DIVE_RE = r"\bName\b.*\bYr\b.*\bSchool\b"
+
+
 # ---------------------------------------------------------------------------
 # Spatial Layout Engine — constants
 # ---------------------------------------------------------------------------
@@ -322,14 +341,18 @@ def parse_pdf_via_spatial_engine(
 
 
 def detect_source_format(raw_text: str) -> str:
-    """Detects if the psych sheet is from Hy-Tek or TeamUnify.
+    """Detects if the psych sheet is from Hy-Tek, TeamUnify, or NCAA/Championship style.
 
     Args:
         raw_text: The raw text content of the psych sheet.
 
     Returns:
-        The source format string: 'hytek', 'teamunify', or 'generic'.
+        The source format string: 'ncaa', 'hytek', 'teamunify', or 'generic'.
     """
+    # Check for NCAA/Championship anchor rows first
+    if re.search(r"\bYr\b.*\bName\b.*\bSchool\b|\bName\b.*\bYr\b.*\bSchool\b|\bTeam\b.*\bRelay\b.*\bSeed\b", raw_text):
+        return "ncaa"
+
     # Look for software branding signatures
     if "Hy-Tek's Meet Manager" in raw_text or "HY-TEK's" in raw_text:
         # Some Hy-Tek-generated sheets use '#N' event headers (TeamUnify rendering
@@ -350,6 +373,7 @@ def detect_source_format(raw_text: str) -> str:
 
         
     return "generic"
+
 
 
 
@@ -410,6 +434,48 @@ def parse_event_header(line: str) -> Tuple[int, str, str, int, str] | None:
 
     
     return None
+
+
+def parse_event_header_extended(line: str) -> dict | None:
+    """Parses event header lines for NCAA/collegiate meets with relay, diving, and exhibition support."""
+    match = re.match(NCAA_EVENT_HEADER_RE, line.strip())
+    if not match:
+        return None
+
+    event_num = int(match.group(1))
+    is_exhibition = match.group(2) == "X"
+    gender = match.group(3)
+
+    if match.group(8):  # diving branch matched
+        return {
+            "number": event_num,
+            "event_label": f"{match.group(1)}{match.group(2) or ''}",
+            "name": f"{match.group(7)} mtr Diving",
+            "gender": gender,
+            "distance": 0,
+            "stroke": "Diving",
+            "is_exhibition": is_exhibition,
+            "is_relay": False,
+            "is_diving": True,
+        }
+
+    age_group = normalize_age_group(match.group(4)) if match.group(4) else ""
+    distance = int(match.group(5))
+    stroke = match.group(6)
+    is_relay = "Relay" in line
+    event_name = f"{age_group} {distance}Y {stroke}".strip()
+
+    return {
+        "number": event_num,
+        "event_label": f"{match.group(1)}{match.group(2) or ''}",
+        "name": event_name,
+        "gender": gender,
+        "distance": distance,
+        "stroke": stroke,
+        "is_exhibition": is_exhibition,
+        "is_relay": is_relay,
+        "is_diving": False,
+    }
 
 
 def normalize_seed_time(time_str: str) -> str:
@@ -772,14 +838,82 @@ class TeamUnifyParser(BasePsychSheetParser):
         return events
 
 
+class NCAACollegeParser(BasePsychSheetParser):
+    """Strategy for collegiate/championship sheets — handles individual,
+    relay, and diving events via structural anchoring."""
+
+    def parse(self, raw_text: str) -> List[Event]:
+        events: List[Event] = []
+        current_event: Event | None = None
+        parsing_entries = False
+        entry_mode: str | None = None   # "individual" | "relay" | "diving"
+
+        lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
+
+        for line in lines:
+            header_info = parse_event_header_extended(line)
+            if header_info:
+                if current_event:
+                    events.append(current_event)
+
+                current_event = Event(
+                    number=header_info["number"],
+                    event_label=header_info["event_label"],
+                    name=header_info.get("name", header_info["stroke"]),
+                    gender=header_info["gender"],
+                    distance=header_info["distance"],
+                    stroke=header_info["stroke"],
+                    is_exhibition=header_info["is_exhibition"],
+                    entries=[],
+                )
+                parsing_entries = False
+                entry_mode = (
+                    "diving" if header_info["is_diving"]
+                    else "relay" if header_info["is_relay"]
+                    else "individual"
+                )
+                continue
+
+            if current_event and not parsing_entries:
+                if entry_mode == "relay" and re.search(NCAA_ANCHOR_RELAY_RE, line):
+                    parsing_entries = True
+                elif entry_mode in ("individual", "diving") and re.search(NCAA_ANCHOR_INDIVIDUAL_RE, line):
+                    parsing_entries = True
+                continue
+
+            if current_event and parsing_entries:
+                if entry_mode == "individual":
+                    m = re.match(NCAA_ATHLETE_RE, line)
+                    if m:
+                        swimmer = Swimmer(name=m.group(2).strip(), year=m.group(3).strip(), team_code=m.group(4).strip())
+                        entry = Entry(place=int(m.group(1)), swimmer=swimmer, seed_time=normalize_seed_time(m.group(5)))
+                        current_event.entries.append(entry)
+
+                elif entry_mode == "diving":
+                    m = re.match(NCAA_DIVE_RE, line)
+                    if m:
+                        swimmer = Swimmer(name=m.group(2).strip(), year=m.group(3).strip(), team_code=m.group(4).strip())
+                        entry = Entry(place=int(m.group(1)), swimmer=swimmer, seed_time=m.group(5))  # score, not a time — no normalize_seed_time
+                        current_event.entries.append(entry)
+
+                elif entry_mode == "relay":
+                    m = re.match(NCAA_RELAY_RE, line)
+                    if m:
+                        team_label = f"{m.group(2).strip()} {m.group(3).strip()}"
+                        relay = RelayEntry(place=int(m.group(1)), team_name=team_label, seed_time=normalize_seed_time(m.group(4)))
+                        current_event.entries.append(relay)
+
+        if current_event:
+            events.append(current_event)
+
+        return events
+
 
 class GenericParser(BasePsychSheetParser):
     """Fallback strategy using heuristic token scanning when software format is ambiguous."""
 
     def parse(self, raw_text: str) -> List[Event]:
         return []
-
-
 class ParserFactory:
     """Dynamically routes processing workloads to the correct parser engine."""
 
@@ -787,7 +921,9 @@ class ParserFactory:
     def get_parser(raw_text: str) -> BasePsychSheetParser:
         source_format = detect_source_format(raw_text)
         
-        if source_format == "hytek":
+        if source_format == "ncaa":
+            return NCAACollegeParser()
+        elif source_format == "hytek":
             return HyTekParser()
         elif source_format == "teamunify":
             return TeamUnifyParser()
