@@ -131,8 +131,13 @@ def generate_heat_sheet_pdf(
     elements.append(Spacer(1 * inch, 0.2 * inch))
     
     event = heat_sheet.event
+    event_title_str = (
+        f"Event {event.number}: {event.gender} {event.stroke}"
+        if "Diving" in event.stroke
+        else f"Event {event.number}: {event.gender} {event.distance} Yard {event.stroke}"
+    )
     elements.append(Paragraph(
-        f"Event {event.number}: {event.gender} {event.distance} Yard {event.stroke}",
+        event_title_str,
         event_style
     ))
 
@@ -197,8 +202,9 @@ def generate_heat_sheet_pdf(
         )
         
         # Build table data
+        time_col_label = "Score" if "Diving" in event.stroke else "Seed Time"
         table_data = [
-            ['Lane', 'Name / Team', 'Team Code', 'Seed Time', 'Place']
+            ['Lane', 'Name / Team', 'Team Code', time_col_label, 'Place']
         ]
         
         for assignment in sorted(assignments, key=lambda a: a.lane):
@@ -417,8 +423,13 @@ def generate_full_meet_pdf(
             alignment=1
         )))
         
+        event_title_str = (
+            f"Event {event.number}: {event.gender} {event.stroke}"
+            if "Diving" in event.stroke
+            else f"Event {event.number}: {event.gender} {event.distance} Yard {event.stroke}"
+        )
         elements.append(Paragraph(
-            f"Event {event.number}: {event.gender} {event.distance} Yard {event.stroke}",
+            event_title_str,
             event_style
         ))
 
@@ -459,8 +470,9 @@ def generate_full_meet_pdf(
             assignments = heats_by_num[heat_num]
             
             # Build table data
+            time_col_label = "Score" if "Diving" in event.stroke else "Time"
             table_data = [
-                ['Lane', 'Name / Team', 'Team', 'Time', '#']
+                ['Lane', 'Name / Team', 'Team', time_col_label, '#']
             ]
             
             for assignment in sorted(assignments, key=lambda a: a.lane):

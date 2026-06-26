@@ -321,6 +321,10 @@ def parse_pdf_via_spatial_engine(
 
     combined_text = "\n".join(all_page_texts)
 
+    # --- Fix 2: split any lines where two event headers were merged by the
+    # spatial engine (both headers sit at the same Y on a two-column page) ---
+    combined_text = _split_merged_event_headers(combined_text)
+
     # --- Route through existing parser factory (unchanged logic) ---
     parser = ParserFactory.get_parser(combined_text)
     events = parser.parse(combined_text)
@@ -338,6 +342,32 @@ def parse_pdf_via_spatial_engine(
 
     return events
 
+
+
+def _split_merged_event_headers(text: str) -> str:
+    """Post-processing pass: split lines where two event headers were merged
+    by the spatial column reconstructor.
+
+    On two-column pages the left and right event headers often share the same
+    top Y-coordinate, so :func:`reconstruct_text_by_columns` joins them into
+    a single line (e.g. ``'Event 1 Women 1000 Yard Freestyle Event 2 Men 1000
+    Yard Freestyle'``).  When the parser sees this, it treats the second header
+    token as part of the first event's noise block, resets
+    ``parsing_entries = False`` mid-roster, and drops all subsequent entries.
+
+    The fix searches each reconstructed line for a second ``Event \\d+`` token
+    and, if found, emits the two halves as separate lines.
+    """
+    result = []
+    for line in text.splitlines():
+        # Look for a second Event header embedded in the same line
+        m = re.search(r'^(.*?Event\s+\d+[^\n]*?)(Event\s+\d+.*)$', line)
+        if m and m.group(1).strip() != m.group(0).strip():
+            result.append(m.group(1).strip())
+            result.append(m.group(2).strip())
+        else:
+            result.append(line)
+    return '\n'.join(result)
 
 
 def detect_source_format(raw_text: str) -> str:
@@ -447,13 +477,14 @@ def parse_event_header_extended(line: str) -> dict | None:
     gender = match.group(3)
 
     if match.group(8):  # diving branch matched
+        dive_height = match.group(7)
         return {
             "number": event_num,
             "event_label": f"{match.group(1)}{match.group(2) or ''}",
             "name": f"{match.group(7)} mtr Diving",
             "gender": gender,
             "distance": 0,
-            "stroke": "Diving",
+            "stroke": f"{dive_height}m Diving",
             "is_exhibition": is_exhibition,
             "is_relay": False,
             "is_diving": True,
@@ -843,6 +874,16 @@ class NCAACollegeParser(BasePsychSheetParser):
     relay, and diving events via structural anchoring."""
 
     def parse(self, raw_text: str) -> List[Event]:
+        # Fix 1: Normalize curly apostrophes/quotes from PDF extraction to ASCII
+        # so that names like O'Neil (with Unicode \u2019) match the regex char class.
+        raw_text = (
+            raw_text
+            .replace('\u2019', "'")
+            .replace('\u2018', "'")
+            .replace('\u201c', '"')
+            .replace('\u201d', '"')
+        )
+
         events: List[Event] = []
         current_event: Event | None = None
         parsing_entries = False
@@ -905,6 +946,7 @@ class NCAACollegeParser(BasePsychSheetParser):
 
         if current_event:
             events.append(current_event)
+
 
         return events
 

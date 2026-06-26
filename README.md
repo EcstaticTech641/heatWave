@@ -360,7 +360,7 @@ pytest           Testing
 ## License & Credits
 
 **Project:** heatWave  
-**Version:** 1.1.2  
+**Version:** 1.1.3  
 **Last Updated:** June 2026  
 **License:** See [LICENSE](LICENSE)
 

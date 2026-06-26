@@ -270,7 +270,7 @@ This would transform the pipeline from a Python library into a user-friendly app
 
 ---
 
-## NCAA & Championship Parser Updates (v1.1.2)
+## NCAA & Championship Parser Updates (v1.1.3)
 
 - **Collegiate Support:** Captures swimmer class years (`FR`, `SO`, `JR`, `SR`, `GR`, `GS`).
 - **Alphanumeric Events:** Supports alphanumeric event IDs/labels (e.g. `41X`) and processes exhibition statuses (`X` / `XNT`).

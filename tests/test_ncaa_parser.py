@@ -39,7 +39,7 @@ def test_parse_event_header_extended():
     assert res["event_label"] == "30"
     assert res["gender"] == "Women"
     assert res["distance"] == 0
-    assert res["stroke"] == "Diving"
+    assert res["stroke"] == "3m Diving"
     assert res["name"] == "3 mtr Diving"
     assert not res["is_exhibition"]
     assert not res["is_relay"]
@@ -52,6 +52,18 @@ def test_parse_event_header_extended():
     assert res["number"] == 41
     assert res["event_label"] == "41X"
     assert res["is_exhibition"]
+
+    # 5. 3m Diving stroke label
+    header_3m = "Event 40 Men 3 mtr Diving NCAA D2 460 dd 15.0"
+    res = parse_event_header_extended(header_3m)
+    assert res is not None
+    assert res["stroke"] == "3m Diving"
+
+    # 6. 1m Diving stroke label
+    header_1m = "Event 41 Women 1 mtr Diving NCAA D2"
+    res = parse_event_header_extended(header_1m)
+    assert res is not None
+    assert res["stroke"] == "1m Diving"
 
 
 def test_ncaa_college_parser_individual_and_exhibition():

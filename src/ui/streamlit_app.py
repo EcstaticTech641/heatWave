@@ -505,13 +505,14 @@ def main():
                         st.markdown(f"**Entries:** {len(event.entries)}")
 
                     st.markdown("**Editable Entries:**")
+                    time_col_label = "Score" if "Diving" in event.stroke else "Seed Time"
                     if is_relay:
                         rows = []
                         for entry in event.entries:
                             rows.append({
                                 "Place": entry.place,
                                 "Team Name": entry.team_name,
-                                "Seed Time": entry.seed_time,
+                                time_col_label: entry.seed_time,
                                 "Low Confidence": entry.low_confidence,
                                 "Error Msg": entry.error_msg
                             })
@@ -522,7 +523,7 @@ def main():
                             entry = event.entries[i]
                             entry.place = int(row["Place"])
                             entry.team_name = str(row["Team Name"])
-                            entry.seed_time = str(row["Seed Time"])
+                            entry.seed_time = str(row[time_col_label])
                             entry.low_confidence = bool(row["Low Confidence"])
                             entry.error_msg = str(row["Error Msg"])
                     else:
@@ -533,7 +534,7 @@ def main():
                                 "Name": entry.swimmer.name,
                                 "Age": entry.swimmer.age,
                                 "Team Code": entry.swimmer.team_code,
-                                "Seed Time": entry.seed_time,
+                                time_col_label: entry.seed_time,
                                 "Low Confidence": entry.low_confidence,
                                 "Error Msg": entry.error_msg
                             })
@@ -543,7 +544,7 @@ def main():
                         for i, row in edited_df.iterrows():
                             entry = event.entries[i]
                             entry.place = int(row["Place"])
-                            entry.seed_time = str(row["Seed Time"])
+                            entry.seed_time = str(row[time_col_label])
                             entry.low_confidence = bool(row["Low Confidence"])
                             entry.error_msg = str(row["Error Msg"])
                             entry.swimmer.name = str(row["Name"])
@@ -902,10 +903,12 @@ def main():
                     with st.expander("View Heat Details"):
                         for heat_sheet in heat_sheets[:5]:
                             event = heat_sheet.event
-                            st.markdown(
-                                f"**Event {event.event_label or event.number}: {event.gender} "
-                                f"{event.distance}Y {event.stroke}**"
+                            event_label_str = (
+                                f"Event {event.event_label or event.number}: {event.gender} {event.stroke}"
+                                if "Diving" in event.stroke
+                                else f"Event {event.event_label or event.number}: {event.gender} {event.distance}Y {event.stroke}"
                             )
+                            st.markdown(f"**{event_label_str}**")
                             heats_by_num = {}
                             for assignment in heat_sheet.assignments:
                                 heats_by_num.setdefault(assignment.heat, []).append(assignment)

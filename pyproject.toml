@@ -1,6 +1,6 @@
 [project]
 name = "heatWave"
-version = "1.1.2"
+version = "1.1.3"
 description = "Automated heat sheet generator for USA Swimming meets — transforms psych sheets into professional PDFs"
 readme = "README.md"
 license = {text = "Apache-2.0"}
