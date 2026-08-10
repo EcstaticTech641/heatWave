@@ -17,7 +17,7 @@ def main():
     print(f"\nExtracting events from: {pdf_path}")
     
     text = extract_text_from_pdf(pdf_path)
-    events = parse_events_from_text(text)
+    events, _val = parse_events_from_text(text)
     print(f"Parsed {len(events)} events")
     
     # Seed all events

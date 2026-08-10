@@ -57,3 +57,12 @@ class SessionConfig(BaseModel):
     start_event_num: int = Field(..., description="First event number assigned to this session")
     start_time: str = Field(default="8:00 AM", description="Wall-clock start time, e.g. '8:00 AM'")
     session_name: str = Field(default="", description="Display name for this session, e.g. 'Morning Session'")
+
+
+class ValidationResult(BaseModel):
+    """Result payload from the psych sheet event validation engine."""
+    is_valid: bool = True
+    warnings: List[str] = []
+    errors: List[str] = []
+    confidence_score: float = 1.0
+

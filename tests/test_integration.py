@@ -29,7 +29,7 @@ def test_complete_pipeline():
     
     # Test 2: Event Parsing
     print("\n✓ TEST 2: Event and Entry Parsing")
-    events = parse_events_from_text(text)
+    events, _val = parse_events_from_text(text)
     assert len(events) > 0, "No events parsed"
     assert len(events) >= 28, f"Expected at least 28 events, got {len(events)}"
     

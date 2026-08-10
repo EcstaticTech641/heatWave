@@ -24,7 +24,7 @@ from src.core.timeline import (
     get_unique_swimmers,
     _format_duration,
 )
-from src.models.schemas import SessionConfig
+from src.models.schemas import SessionConfig, ValidationResult
 from src.utils.cleanup import start_cleanup_daemon, clear_directory, cleanup_old_files
 
 
@@ -162,6 +162,8 @@ def initialize_session_state():
     defaults = {
         "pdf_uploaded": False,
         "events": None,
+        "validation_result": None,
+        "override_proceed": False,
         "heat_sheets": None,
         "pdf_content": None,
         "timeline": None,
@@ -192,6 +194,40 @@ def initialize_session_state():
 
 
 
+def render_validation_banner(val: ValidationResult | None):
+    """Renders a three-state validation health banner in the UI."""
+    if not val:
+        return
+    if val.is_valid and val.confidence_score >= 0.85:
+        st.success(f"✅ Psych sheet parsed successfully! (Confidence score: {val.confidence_score * 100:.0f}%)")
+    elif 0.70 <= val.confidence_score < 0.85 and val.is_valid:
+        st.warning(
+            "⚠️ **Warning:** This document may not match standard USA Swimming psych sheet formatting. "
+            "Please review parsed events carefully in the table below before generating heat sheets."
+        )
+        if val.warnings:
+            with st.expander("View Validation Warnings"):
+                for w in val.warnings:
+                    st.write(f"- {w}")
+    else:
+        st.error(
+            "🚨 **Critical Warning:** Parsing errors detected. Document format may be incompatible or corrupt."
+        )
+        if val.errors:
+            st.error("**Validation Errors:**\n" + "\n".join(f"- {e}" for e in val.errors))
+        if val.warnings:
+            with st.expander("View Additional Validation Warnings"):
+                for w in val.warnings:
+                    st.write(f"- {w}")
+        
+        override_val = st.checkbox(
+            "I have reviewed the preview and want to proceed anyway.",
+            value=st.session_state.get("override_proceed", False),
+            key="override_proceed_chk"
+        )
+        st.session_state.override_proceed = override_val
+
+
 def process_pdf(pdf_file, column_override: int | None = None):
     """Process uploaded PDF through the spatial layout engine and extract events.
 
@@ -204,7 +240,7 @@ def process_pdf(pdf_file, column_override: int | None = None):
             bypassing histogram detection entirely.
 
     Returns:
-        Tuple of (events, raw_bytes) where raw_bytes are the original PDF bytes.
+        Tuple of (events, validation, raw_bytes) where raw_bytes are original PDF bytes.
     """
     try:
         raw_bytes = pdf_file.getbuffer().tobytes()
@@ -216,17 +252,17 @@ def process_pdf(pdf_file, column_override: int | None = None):
             tmp_path = tmp_file.name
 
         with st.spinner("Analyzing layout and parsing events..."):
-            events = parse_pdf_via_spatial_engine(tmp_path, column_override=column_override)
+            events, validation = parse_pdf_via_spatial_engine(tmp_path, column_override=column_override)
 
         Path(tmp_path).unlink(missing_ok=True)
-        return events, raw_bytes
+        return events, validation, raw_bytes
 
     except Exception as e:
         st.error(f"Error processing PDF: {str(e)}")
-        return None, None
+        return None, None, None
 
 
-def reprocess_pdf_with_override(column_override: int) -> list:
+def reprocess_pdf_with_override(column_override: int):
     """Re-run the spatial engine using bytes already stored in session state.
 
     Called by the manual column-override retry button.  Saves the in-memory
@@ -237,26 +273,27 @@ def reprocess_pdf_with_override(column_override: int) -> list:
         column_override: 1, 2, or 3 — forces the corresponding column layout.
 
     Returns:
-        List of Event objects, or empty list on failure.
+        Tuple of (events, validation), or ([], None) on failure.
     """
     raw_bytes = st.session_state.get("pdf_bytes_for_retry")
     if not raw_bytes:
         st.error("No PDF bytes available for retry. Please re-upload the file.")
-        return []
+        return [], None
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
             tmp_file.write(raw_bytes)
             tmp_path = tmp_file.name
 
         with st.spinner(f"Re-processing with {column_override}-column layout..."):
-            events = parse_pdf_via_spatial_engine(tmp_path, column_override=column_override)
+            events, validation = parse_pdf_via_spatial_engine(tmp_path, column_override=column_override)
 
         Path(tmp_path).unlink(missing_ok=True)
-        return events
+        return events, validation
 
     except Exception as e:
         st.error(f"Error re-processing PDF: {str(e)}")
-        return []
+        return [], None
+
 
 
 def seed_all_events(events, num_lanes):
@@ -363,10 +400,12 @@ def main():
             st.info(f"Size: **{uploaded_file.size / 1024:.1f} KB**")
 
             if st.button("Parse PDF", type="primary", width='stretch'):
-                events, _raw = process_pdf(uploaded_file)
+                events, validation, _raw = process_pdf(uploaded_file)
 
                 if events:
                     st.session_state.events = events
+                    st.session_state.validation_result = validation
+                    st.session_state.override_proceed = False
                     st.session_state.pdf_uploaded = True
                     # Reset downstream state when a new file is loaded
                     st.session_state.heat_sheets = None
@@ -377,29 +416,22 @@ def main():
                     auto_layout_failed = any(e.auto_layout_failed for e in events)
                     st.session_state.auto_layout_failed = auto_layout_failed
 
-                    st.markdown(
-                        '<div class="success-box">PDF parsed successfully!</div>',
-                        unsafe_allow_html=True,
-                    )
+                    render_validation_banner(validation)
 
-                    relay_count = sum(
-                        1 for e in events
-                        if e.entries and not hasattr(e.entries[0], "swimmer")
-                    )
-                    individual_count = sum(
-                        1 for e in events
-                        if e.entries and hasattr(e.entries[0], "swimmer")
-                    )
+                    unique_athletes = len({
+                        entry.swimmer.name
+                        for e in events
+                        for entry in e.entries
+                        if hasattr(entry, "swimmer") and entry.swimmer and entry.swimmer.name
+                    })
                     total_entries = sum(len(e.entries) for e in events)
 
-                    col_a, col_b, col_c, col_d = st.columns(4)
+                    col_a, col_b, col_c = st.columns(3)
                     with col_a:
                         st.metric("Total Events", len(events))
                     with col_b:
-                        st.metric("Relay Events", relay_count)
+                        st.metric("Total Athletes", unique_athletes)
                     with col_c:
-                        st.metric("Individual Events", individual_count)
-                    with col_d:
                         st.metric("Total Entries", total_entries)
 
                     # --------------------------------------------------------
@@ -424,9 +456,10 @@ def main():
                             ),
                         )
                         if st.button("Re-process Document", key="reprocess_btn", type="primary"):
-                            retried_events = reprocess_pdf_with_override(manual_columns)
+                            retried_events, retried_val = reprocess_pdf_with_override(manual_columns)
                             if retried_events:
                                 st.session_state.events = retried_events
+                                st.session_state.validation_result = retried_val
                                 st.session_state.auto_layout_failed = False
                                 st.session_state.heat_sheets = None
                                 st.session_state.timeline = None
@@ -440,6 +473,8 @@ def main():
             if st.button("🔄 Reset State", type="secondary", width='stretch'):
                 st.session_state.pdf_uploaded = False
                 st.session_state.events = None
+                st.session_state.validation_result = None
+                st.session_state.override_proceed = False
                 st.session_state.heat_sheets = None
                 st.session_state.timeline = None
                 st.session_state.selected_swimmer = None
@@ -455,15 +490,25 @@ def main():
         if st.session_state.events is None:
             st.info("Upload and parse a PDF first to see the preview.")
         else:
-            st.markdown(f"### {len(events)} Events Found")
-            # Check for low confidence entries
+            render_validation_banner(st.session_state.get("validation_result"))
 
-            low_conf_count = sum(1 for e in events for entry in e.entries if getattr(entry, "low_confidence", False))
-            if low_conf_count > 0:
-                st.warning(
-                    f"⚠️ **Warning:** {low_conf_count} entries have been flagged as low-confidence due to potential parsing errors. "
-                    "You can edit these entries directly in the tables below."
-                )
+            unique_athletes = len({
+                entry.swimmer.name
+                for e in events
+                for entry in e.entries
+                if hasattr(entry, "swimmer") and entry.swimmer and entry.swimmer.name
+            })
+            total_entries = sum(len(e.entries) for e in events)
+
+            mcol1, mcol2, mcol3 = st.columns(3)
+            with mcol1:
+                st.metric("Total Events", len(events))
+            with mcol2:
+                st.metric("Total Athletes", unique_athletes)
+            with mcol3:
+                st.metric("Total Entries", total_entries)
+
+            st.markdown("---")
 
             col1, col2 = st.columns(2)
             with col1:
@@ -504,8 +549,9 @@ def main():
                     with col3:
                         st.markdown(f"**Entries:** {len(event.entries)}")
 
-                    st.markdown("**Editable Entries:**")
+                    st.markdown("**Entries Preview:**")
                     time_col_label = "Score" if "Diving" in event.stroke else "Seed Time"
+                    import pandas as pd
                     if is_relay:
                         rows = []
                         for entry in event.entries:
@@ -516,40 +562,22 @@ def main():
                                 "Low Confidence": entry.low_confidence,
                                 "Error Msg": entry.error_msg
                             })
-                        import pandas as pd
                         df = pd.DataFrame(rows)
-                        edited_df = st.data_editor(df, key=f"editor_{event.number}_{events.index(event)}", hide_index=True)
-                        for i, row in edited_df.iterrows():
-                            entry = event.entries[i]
-                            entry.place = int(row["Place"])
-                            entry.team_name = str(row["Team Name"])
-                            entry.seed_time = str(row[time_col_label])
-                            entry.low_confidence = bool(row["Low Confidence"])
-                            entry.error_msg = str(row["Error Msg"])
+                        st.dataframe(df, hide_index=True, use_container_width=True)
                     else:
                         rows = []
                         for entry in event.entries:
                             rows.append({
                                 "Place": entry.place,
-                                "Name": entry.swimmer.name,
-                                "Age": entry.swimmer.age,
-                                "Team Code": entry.swimmer.team_code,
+                                "Name": entry.swimmer.name if entry.swimmer else "",
+                                "Age": entry.swimmer.age if entry.swimmer else None,
+                                "Team Code": entry.swimmer.team_code if entry.swimmer else "",
                                 time_col_label: entry.seed_time,
                                 "Low Confidence": entry.low_confidence,
                                 "Error Msg": entry.error_msg
                             })
-                        import pandas as pd
                         df = pd.DataFrame(rows)
-                        edited_df = st.data_editor(df, key=f"editor_{event.number}_{events.index(event)}", hide_index=True)
-                        for i, row in edited_df.iterrows():
-                            entry = event.entries[i]
-                            entry.place = int(row["Place"])
-                            entry.seed_time = str(row[time_col_label])
-                            entry.low_confidence = bool(row["Low Confidence"])
-                            entry.error_msg = str(row["Error Msg"])
-                            entry.swimmer.name = str(row["Name"])
-                            entry.swimmer.age = int(row["Age"]) if row["Age"] is not None and str(row["Age"]).isdigit() else None
-                            entry.swimmer.team_code = str(row["Team Code"])
+                        st.dataframe(df, hide_index=True, use_container_width=True)
 
 
             if len(filtered_events) > 10:
@@ -837,9 +865,20 @@ def main():
             - Heat Gap: {heat_gap} min
             """)
 
+            val = st.session_state.get("validation_result")
+            is_blocked = False
+            if val and (not val.is_valid or val.confidence_score < 0.70):
+                if not st.session_state.get("override_proceed", False):
+                    is_blocked = True
+                    st.error(
+                        "⛔ **Seeding Guard:** Critical parsing errors or low confidence were detected for this document. "
+                        "Please review parsed events in the **Preview** tab or check the override box on the **Upload** / **Preview** tab to proceed."
+                    )
+
             if st.button(
                 "Generate Heat Sheets", type="primary",
-                width='stretch', key="generate_btn"
+                width='stretch', key="generate_btn",
+                disabled=is_blocked
             ):
                 heat_sheets = seed_all_events(events, num_lanes)
 

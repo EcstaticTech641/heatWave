@@ -16,7 +16,7 @@ def test_hytek_baseline_success():
     assert sample_path.exists(), "Hy-Tek sample file is missing"
     
     text = sample_path.read_text(encoding="utf-8")
-    events = parse_events_from_text(text)
+    events, _val = parse_events_from_text(text)
     
     # Standard Hy-Tek should parse, but because the baseline parser requires a colon in the seed time
     # (e.g. 2:42.05 but not 28.45), it will fail to parse entries with times under 1 minute.
@@ -56,7 +56,7 @@ def test_teamunify_baseline_success():
     assert sample_path.exists(), "TeamUnify sample file is missing"
     
     text = sample_path.read_text(encoding="utf-8")
-    events = parse_events_from_text(text)
+    events, _val = parse_events_from_text(text)
     
     # We should parse exactly 2 events
     assert len(events) == 2, f"Expected 2 parsed events, got {len(events)}"

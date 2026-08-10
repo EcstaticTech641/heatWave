@@ -360,8 +360,8 @@ pytest           Testing
 ## License & Credits
 
 **Project:** heatWave  
-**Version:** 1.1.3  
-**Last Updated:** June 2026  
+**Version:** 1.1.4  
+**Last Updated:** August 2026  
 **License:** See [LICENSE](LICENSE)
 
 Made for USA Swimming coaches and meet directors.

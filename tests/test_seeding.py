@@ -128,7 +128,7 @@ def test_seeding_with_real_data():
     # Extract and parse events from sample PDF
     pdf_path = "data/samples/1769543968773-7a7qa8q6s.pdf"
     text = extract_text_from_pdf(pdf_path)
-    events = parse_events_from_text(text)
+    events, _val = parse_events_from_text(text)
     
     print(f"Parsed {len(events)} events from PDF")
     

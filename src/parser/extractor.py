@@ -1,8 +1,10 @@
 import abc
+import os
 import re
 from typing import List, Tuple
 import pdfplumber
-from ..models.schemas import Event, Entry, RelayEntry, Swimmer
+from ..models.schemas import Event, Entry, RelayEntry, Swimmer, ValidationResult
+from .validator import validate_parsed_events
 
 # Regular Expressions for parsing variants
 HYTEK_EVENT_RE = r"Event\s+(\d+)\s+(Girls|Boys|Men|Women|Mixed)\s+(.+?)\s+(\d+)\s+(Yard|Meter)\s+(Freestyle|Backstroke|Breaststroke|Butterfly|Individual Medley|Medley Relay|Free Relay)"
@@ -274,7 +276,7 @@ def reconstruct_text_by_columns(
 def parse_pdf_via_spatial_engine(
     pdf_path: str,
     column_override: int | None = None,
-) -> List[Event]:
+) -> tuple[List[Event], ValidationResult]:
     """Full spatial-layout pipeline: extract → detect columns → reconstruct → parse.
 
     Processes each page of the PDF individually through the spatial engine,
@@ -288,8 +290,7 @@ def parse_pdf_via_spatial_engine(
             force the corresponding ``FALLBACK_N_COLUMN`` constant.
 
     Returns:
-        List of :class:`~src.models.schemas.Event` objects with
-        ``layout_confidence_low`` and ``auto_layout_failed`` flags propagated.
+        Tuple of (List[Event], ValidationResult).
     """
     all_page_texts: List[str] = []
     previous_boundaries: List[Tuple[float, float]] | None = None
@@ -340,7 +341,8 @@ def parse_pdf_via_spatial_engine(
         event.layout_confidence_low = layout_confidence_low
         event.auto_layout_failed = auto_layout_failed
 
-    return events
+    validation = validate_parsed_events(events)
+    return events, validation
 
 
 
@@ -379,9 +381,11 @@ def detect_source_format(raw_text: str) -> str:
     Returns:
         The source format string: 'ncaa', 'hytek', 'teamunify', or 'generic'.
     """
-    # Check for NCAA/Championship anchor rows first
-    if re.search(r"\bYr\b.*\bName\b.*\bSchool\b|\bName\b.*\bYr\b.*\bSchool\b|\bTeam\b.*\bRelay\b.*\bSeed\b", raw_text):
-        return "ncaa"
+    # NCAA/Collegiate parsing engine disabled for v1.1.4 (USA Swimming age-group primary)
+    # Set HEATWAVE_NCAA=1 to re-enable during testing.
+    if os.getenv("HEATWAVE_NCAA", "0") == "1":
+        if re.search(r"\bYr\b.*\bName\b.*\bSchool\b|\bName\b.*\bYr\b.*\bSchool\b|\bTeam\b.*\bRelay\b.*\bSeed\b", raw_text):
+            return "ncaa"
 
     # Look for software branding signatures
     if "Hy-Tek's Meet Manager" in raw_text or "HY-TEK's" in raw_text:
@@ -963,7 +967,8 @@ class ParserFactory:
     def get_parser(raw_text: str) -> BasePsychSheetParser:
         source_format = detect_source_format(raw_text)
         
-        if source_format == "ncaa":
+        # NCAA/Collegiate parsing engine disabled for v1.2.0 unless explicitly enabled
+        if os.getenv("HEATWAVE_NCAA", "0") == "1" and source_format == "ncaa":
             return NCAACollegeParser()
         elif source_format == "hytek":
             return HyTekParser()
@@ -973,8 +978,10 @@ class ParserFactory:
             return GenericParser()
 
 
-def parse_events_from_text(text: str) -> List[Event]:
+def parse_events_from_text(text: str) -> tuple[List[Event], ValidationResult]:
     """Top-level functional interface used by the Streamlit application pipeline."""
     parser = ParserFactory.get_parser(text)
-    return parser.parse(text)
+    events = parser.parse(text)
+    validation = validate_parsed_events(events)
+    return events, validation
 

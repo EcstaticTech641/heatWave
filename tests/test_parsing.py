@@ -109,7 +109,7 @@ def test_full_extraction_and_parsing():
     print(f"✓ Extracted {len(text)} characters from PDF")
     
     # Parse events
-    events = parse_events_from_text(text)
+    events, _val = parse_events_from_text(text)
     assert len(events) > 0
     print(f"✓ Parsed {len(events)} events from text")
     

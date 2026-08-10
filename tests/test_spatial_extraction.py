@@ -24,12 +24,14 @@ def _load_baseline_events(pdf_path: str):
     """Run the legacy two-step pipeline to establish a baseline event list."""
     from src.parser.extractor import extract_text_from_pdf, parse_events_from_text
     text = extract_text_from_pdf(pdf_path)
-    return parse_events_from_text(text)
+    events, _val = parse_events_from_text(text)
+    return events
 
 
 def _load_spatial_events(pdf_path: str, column_override=None):
     from src.parser.extractor import parse_pdf_via_spatial_engine
-    return parse_pdf_via_spatial_engine(pdf_path, column_override=column_override)
+    events, _val = parse_pdf_via_spatial_engine(pdf_path, column_override=column_override)
+    return events
 
 
 # ===========================================================================
@@ -117,7 +119,7 @@ def test_spatial_engine_column_override_does_not_crash(override):
     value, even if the resulting parse is empty (wrong column count for the PDF)."""
     from src.parser.extractor import parse_pdf_via_spatial_engine
     try:
-        events = parse_pdf_via_spatial_engine(_SAMPLE_2COL, column_override=override)
+        events, _val = parse_pdf_via_spatial_engine(_SAMPLE_2COL, column_override=override)
         assert isinstance(events, list)
     except Exception as exc:
         pytest.fail(f"column_override={override} raised: {exc}")

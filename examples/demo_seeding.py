@@ -17,7 +17,7 @@ def main():
     text = extract_text_from_pdf(pdf_path)
     
     print("Parsing events...")
-    events = parse_events_from_text(text)
+    events, _val = parse_events_from_text(text)
     print(f"Successfully parsed {len(events)} events\n")
     
     # Separate into relay and individual events

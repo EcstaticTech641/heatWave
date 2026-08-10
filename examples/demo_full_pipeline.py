@@ -29,7 +29,7 @@ def main():
     print(f"   ✓ Handled two-column layout (left + right columns)")
     
     # Parse events and entries
-    events = parse_events_from_text(text)
+    events, _val = parse_events_from_text(text)
     print(f"\n2. Parsing events and entries")
     print(f"   ✓ Found {len(events)} total events")
     

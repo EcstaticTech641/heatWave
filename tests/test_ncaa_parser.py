@@ -146,13 +146,14 @@ Team Relay Seed Time
     assert event.entries[2].seed_time == "X1:45.00"
 
 
-def test_integration_rmac_pdf():
+def test_integration_rmac_pdf(monkeypatch):
+    monkeypatch.setenv("HEATWAVE_NCAA", "1")
     pdf_path = "data/samples/2024_rmac_swd_psych.pdf"
     if not Path(pdf_path).exists():
         pytest.skip(f"RMAC sample PDF not found at {pdf_path}")
 
     # Use the full spatial layout pipeline
-    events = parse_pdf_via_spatial_engine(pdf_path)
+    events, _val = parse_pdf_via_spatial_engine(pdf_path)
     assert len(events) > 0
 
     # Verify event uniqueness & types
