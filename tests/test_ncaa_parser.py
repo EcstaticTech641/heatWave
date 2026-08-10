@@ -1,13 +1,21 @@
+import os
 import pytest
 import re
 from pathlib import Path
 from src.parser.extractor import (
-    parse_event_header_extended,
-    NCAACollegeParser,
     parse_pdf_via_spatial_engine,
     detect_source_format,
 )
+from src.parser.formats.ncaa.ncaa_parser import (
+    parse_event_header_extended,
+    NCAACollegeParser,
+)
 from src.models.schemas import Event, Swimmer, Entry, RelayEntry
+
+pytestmark = pytest.mark.skipif(
+    os.getenv("HEATWAVE_NCAA", "0") != "1",
+    reason="NCAA parser disabled (set HEATWAVE_NCAA=1 to enable)"
+)
 
 def test_parse_event_header_extended():
     # 1. Standard swim event

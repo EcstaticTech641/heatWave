@@ -18,3 +18,7 @@ data/output/*
 python_guide3.md
 expansion.md
 SESSION.md
+
+# Golden Test Fixtures (contains local psych sheet meet data)
+tests/fixtures/psych_sheets/
+tests/fixtures/expected/
