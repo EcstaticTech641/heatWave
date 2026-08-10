@@ -194,7 +194,7 @@ def initialize_session_state():
 
 
 
-def render_validation_banner(val: ValidationResult | None):
+def render_validation_banner(val: ValidationResult | None, key_suffix: str = "main"):
     """Renders a three-state validation health banner in the UI."""
     if not val:
         return
@@ -220,10 +220,16 @@ def render_validation_banner(val: ValidationResult | None):
                 for w in val.warnings:
                     st.write(f"- {w}")
         
+        widget_key = f"override_proceed_chk_{key_suffix}"
+        
+        def _on_override_change():
+            st.session_state["override_proceed"] = st.session_state.get(widget_key, False)
+
         override_val = st.checkbox(
             "I have reviewed the preview and want to proceed anyway.",
             value=st.session_state.get("override_proceed", False),
-            key="override_proceed_chk"
+            key=widget_key,
+            on_change=_on_override_change
         )
         st.session_state.override_proceed = override_val
 
@@ -416,7 +422,7 @@ def main():
                     auto_layout_failed = any(e.auto_layout_failed for e in events)
                     st.session_state.auto_layout_failed = auto_layout_failed
 
-                    render_validation_banner(validation)
+                    render_validation_banner(validation, key_suffix="upload")
 
                     unique_athletes = len({
                         entry.swimmer.name
@@ -490,7 +496,7 @@ def main():
         if st.session_state.events is None:
             st.info("Upload and parse a PDF first to see the preview.")
         else:
-            render_validation_banner(st.session_state.get("validation_result"))
+            render_validation_banner(st.session_state.get("validation_result"), key_suffix="preview")
 
             unique_athletes = len({
                 entry.swimmer.name
