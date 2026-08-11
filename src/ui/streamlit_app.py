@@ -26,6 +26,8 @@ from src.core.timeline import (
 )
 from src.models.schemas import SessionConfig, ValidationResult
 from src.utils.cleanup import start_cleanup_daemon, clear_directory, cleanup_old_files
+from src.utils.printer import list_windows_printers, print_pdf_file
+from src.utils.updater import check_for_updates
 
 
 def sanitize_file_name(value: str) -> str:
@@ -181,6 +183,7 @@ def initialize_session_state():
         "auto_layout_failed": False,  # True when histogram produced no usable boundaries
         "pdf_bytes_for_retry": None,  # Raw uploaded bytes kept in memory for column override retry
         "cli_pdf_processed": False,
+        "update_check_result": None,
     }
     for key, val in defaults.items():
         if key not in st.session_state:
@@ -391,6 +394,33 @@ def main():
     initialize_session_state()
     process_cli_pdf_if_present()
     events = st.session_state.events
+
+    # Sidebar — About & Privacy-Safe Update Checker
+    with st.sidebar:
+        st.markdown("### ℹ️ About & Updates")
+        st.markdown("**heatWave Desktop v1.3.0**")
+        st.markdown("*100% Offline • Zero Telemetry*")
+        st.markdown("---")
+        
+        if st.button("Check for Updates", key="btn_check_updates", width='stretch'):
+            with st.spinner("Checking GitHub Releases..."):
+                res = check_for_updates("1.3.0")
+                st.session_state.update_check_result = res
+
+        upd = st.session_state.get("update_check_result")
+        if upd:
+            if upd.get("error"):
+                st.warning(f"⚠️ {upd['error']}")
+            elif upd.get("update_available"):
+                st.info(f"🎉 **v{upd['latest_version']}** is available!")
+                notes = upd.get("release_notes", "")
+                if notes:
+                    with st.expander("Release Notes"):
+                        st.markdown(notes[:500] + ("..." if len(notes) > 500 else ""))
+                url = upd.get("download_url", "https://github.com/EcstaticTech641/heatWave/releases")
+                st.markdown(f"[👉 Download Update on GitHub]({url})")
+            else:
+                st.success("✅ Running latest version (v1.3.0).")
 
     # Header
     st.markdown('<div class="main-header"> heatWave</div>', unsafe_allow_html=True)
@@ -1055,6 +1085,48 @@ def main():
                                     st.success(f"✅ `{out_path.name}`")
                                 except Exception as e:
                                     st.error(f"Error: {e}")
+
+                st.markdown("---")
+                with st.expander("🖨️ Direct Deck Printing"):
+                    printers, default_printer = list_windows_printers()
+                    if not printers:
+                        st.info(
+                            "ℹ️ Direct deck printing requires Windows with installed printers. "
+                            "You can still save PDFs above and print via your system viewer."
+                        )
+                    else:
+                        def_idx = printers.index(default_printer) if default_printer in printers else 0
+                        selected_printer = st.selectbox(
+                            "Select Target Printer:",
+                            options=printers,
+                            index=def_idx,
+                            key="deck_printer_select",
+                            help="Installed Windows printers",
+                        )
+
+                        if st.button(
+                            "🖨️ Print Heat Sheet to Selected Printer",
+                            type="primary",
+                            width='stretch',
+                            key="spool_pdf_btn",
+                        ):
+                            with st.spinner(f"Spooling heat sheet to '{selected_printer}'..."):
+                                try:
+                                    out_path = downloads / f"HeatSheet_{safe_title}.pdf"
+                                    generate_full_meet_pdf(
+                                        st.session_state.heat_sheets,
+                                        str(out_path),
+                                        meet_title=meet_title,
+                                        meet_date=meet_date,
+                                        timeline=timeline,
+                                    )
+                                    ok, msg = print_pdf_file(str(out_path), selected_printer)
+                                    if ok:
+                                        st.success(f"✅ {msg}")
+                                    else:
+                                        st.error(f"❌ {msg}")
+                                except Exception as e:
+                                    st.error(f"Error spooling PDF: {e}")
 
     # ========================================================================
     # TAB 5: FIND SWIMMER

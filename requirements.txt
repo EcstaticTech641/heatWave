@@ -13,6 +13,7 @@ reportlab
 # Desktop UI
 streamlit
 pywebview
+pywin32>=306
 
 # Development / Testing
 pytest

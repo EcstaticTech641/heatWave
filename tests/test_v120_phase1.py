@@ -16,8 +16,8 @@ PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 
 
 def test_version_consistency():
-    """Verify version 1.2.1 is consistently set across pyproject.toml, run_desktop.py, installer.iss, and docs."""
-    expected_version = "1.2.1"
+    """Verify current version is consistently set across pyproject.toml, run_desktop.py, installer.iss, and docs."""
+    expected_version = "1.3.0"
 
     # 1. pyproject.toml
     pyproject_text = (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8")
