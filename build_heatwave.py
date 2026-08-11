@@ -17,7 +17,7 @@ def get_project_version() -> str:
         match = re.search(r'version\s*=\s*"([^"]+)"', pyproject_path.read_text(encoding="utf-8"))
         if match:
             return match.group(1)
-    return "1.2.0"
+    return "1.2.1"
 
 version = get_project_version()
 print(f"[*] Target version: v{version}")

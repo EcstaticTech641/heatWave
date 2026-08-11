@@ -1,8 +1,9 @@
 """
-Unit and Integration Test Suite for heatWave v1.2.0 Phase 1 features:
-- Version consistency (1.2.0 across configuration & docs)
+Unit and Integration Test Suite for heatWave v1.2.1:
+- Version consistency (1.2.1 across configuration & docs)
 - Windows Theme Auto-Sync detection
 - CLI PDF File Ingestion argument handling
+- Desktop launcher health check & path resolution
 """
 import os
 import re
@@ -15,8 +16,8 @@ PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 
 
 def test_version_consistency():
-    """Verify version 1.2.0 is consistently set across pyproject.toml, run_desktop.py, installer.iss, and docs."""
-    expected_version = "1.2.0"
+    """Verify version 1.2.1 is consistently set across pyproject.toml, run_desktop.py, installer.iss, and docs."""
+    expected_version = "1.2.1"
 
     # 1. pyproject.toml
     pyproject_text = (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8")
@@ -62,3 +63,20 @@ def test_cli_pdf_argument_parsing(monkeypatch, tmp_path):
         os.environ["HEATWAVE_CLI_PDF"] = os.path.abspath(candidate)
 
     assert os.environ.get("HEATWAVE_CLI_PDF") == str(dummy_pdf.resolve())
+
+
+def test_launcher_path_resolution():
+    """Verify _get_streamlit_app_path resolves existing streamlit_app.py."""
+    from run_desktop import _get_streamlit_app_path
+    app_path = _get_streamlit_app_path()
+    assert os.path.exists(app_path)
+    assert app_path.endswith("streamlit_app.py")
+
+
+def test_wait_for_server_early_exit_on_thread_error():
+    """Verify _wait_for_server exits early if thread status indicates error."""
+    from run_desktop import _wait_for_server
+    status_dict = {"finished": True, "error": "Mock thread failure"}
+    ready = _wait_for_server(port=9999, status_dict=status_dict, timeout=5)
+    assert ready is False
+

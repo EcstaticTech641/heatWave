@@ -88,13 +88,13 @@ try {
     }
     
     # Test 2: Check if port 8501 is listening
-    Write-Step "Test 2: Checking if Streamlit is listening on port 8501..."
+    Write-Step "Test 2: Checking if Streamlit is listening on port 8501 (127.0.0.1)..."
     
     $listening = $false
     for ($i = 0; $i -lt 10; $i++) {
-        $connection_test = Test-NetConnection -ComputerName localhost -Port 8501 -WarningAction SilentlyContinue
+        $connection_test = Test-NetConnection -ComputerName 127.0.0.1 -Port 8501 -WarningAction SilentlyContinue
         if ($connection_test.TcpTestSucceeded) {
-            Write-Success "Streamlit is listening on localhost:8501"
+            Write-Success "Streamlit is listening on 127.0.0.1:8501"
             $listening = $true
             break
         }
@@ -108,10 +108,10 @@ try {
     }
     
     # Test 3: Check browser access
-    Write-Step "Test 3: Checking HTTP access to localhost:8501..."
+    Write-Step "Test 3: Checking HTTP access to 127.0.0.1:8501..."
     
     try {
-        $response = Invoke-WebRequest -Uri "http://localhost:8501" -TimeoutSec 5 -WarningAction SilentlyContinue
+        $response = Invoke-WebRequest -Uri "http://127.0.0.1:8501" -TimeoutSec 5 -WarningAction SilentlyContinue
         if ($response.StatusCode -eq 200) {
             Write-Success "HTTP connection successful (Status 200)"
         } else {

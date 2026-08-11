@@ -132,7 +132,7 @@ heatWave/
 ## License & Credits
 
 **Project:** heatWave  
-**Version:** 1.2.0  
+**Version:** 1.2.1  
 **Last Updated:** August 2026  
 **License:** See [LICENSE](LICENSE)  
 

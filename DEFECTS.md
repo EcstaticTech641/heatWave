@@ -1,6 +1,6 @@
 # heatWave Known Defects & Format Scope Boundaries
 
-This document formalizes supported psych sheet format boundaries, documented limitations, and tracked defect logs for **heatWave** (v1.2.0).
+This document formalizes supported psych sheet format boundaries, documented limitations, and tracked defect logs for **heatWave** (v1.2.1).
 
 ---
 
@@ -38,6 +38,10 @@ This document formalizes supported psych sheet format boundaries, documented lim
 ### C1 — Relay Stroke Label Normalization
 - **Description:** Certain legacy Hy-Tek relay headers format as `200 Yard Free Relay` vs `200 Yard Freestyle Relay`.
 - **Workaround:** Normalizer maps `Free Relay` and `FR` to standard stroke strings.
+
+### C2 — Desktop PyInstaller Cold-Start Race Condition (Fixed in v1.2.1)
+- **Description:** Opening `heatWave.exe` rendered an Edge WebView2 "ERR_CONNECTION_REFUSED" or "Can't reach this page" error due to pywebview launching before Streamlit finished socket binding.
+- **Fix:** Added explicit IPv4 `127.0.0.1` binding, server thread status monitoring, multi-path UI script resolution, and health-check error window fallback in `run_desktop.py`.
 
 ---
 
