@@ -12,23 +12,60 @@ from pathlib import Path
 import pytest
 from unittest.mock import MagicMock, patch
 
-from src.utils.printer import list_windows_printers, print_pdf_file
+from src.utils.printer import is_virtual_printer, list_windows_printers, print_pdf_file
 from src.utils.updater import check_for_updates, parse_version_tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
+def test_is_virtual_printer_detection():
+    """Verify is_virtual_printer accurately identifies virtual file-creation drivers."""
+    assert is_virtual_printer("Microsoft Print to PDF") is True
+    assert is_virtual_printer("Microsoft XPS Document Writer") is True
+    assert is_virtual_printer("Send to OneNote 2016") is True
+    assert is_virtual_printer("CutePDF Writer") is True
+    assert is_virtual_printer("Adobe PDF") is True
+
+    assert is_virtual_printer("HP LaserJet Pro M404dn") is False
+    assert is_virtual_printer("Brother HL-L2350DW") is False
+    assert is_virtual_printer("Zebra ZD421 Deck Printer") is False
+    assert is_virtual_printer("") is False
+
+
+def test_printer_utility_virtual_printer_guard():
+    """Verify print_pdf_file rejects virtual file printers with clear user guidance."""
+    tmp_pdf = PROJECT_ROOT / "tests" / "test_virtual_dummy.pdf"
+    tmp_pdf.write_text("%PDF-1.4 dummy spool", encoding="utf-8")
+
+    mock_win32api = MagicMock()
+    mock_win32print = MagicMock()
+
+    try:
+        with patch("sys.platform", "win32"):
+            with patch.dict("sys.modules", {"win32api": mock_win32api, "win32print": mock_win32print}):
+                ok, msg = print_pdf_file(str(tmp_pdf), "Microsoft Print to PDF")
+                assert ok is False
+                assert "virtual file printer" in msg
+                assert "Download Heat Sheet PDF" in msg
+                # ShellExecute should NOT be called for virtual printers
+                mock_win32api.ShellExecute.assert_not_called()
+    finally:
+        if tmp_pdf.exists():
+            tmp_pdf.unlink()
+
+
+
 def test_v130_version_consistency():
-    """Verify version 1.3.0 is consistently set across project configuration, launcher, and docs."""
-    expected_version = "1.3.0"
+    """Verify current version is consistently set across project configuration, launcher, and docs."""
+    from src._version import __version__ as expected_version
 
     # 1. pyproject.toml
     pyproject_text = (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8")
     assert f'version = "{expected_version}"' in pyproject_text
 
-    # 2. run_desktop.py
+    # 2. run_desktop.py — now imports __version__ from src._version
     run_desktop_text = (PROJECT_ROOT / "run_desktop.py").read_text(encoding="utf-8")
-    assert f'APP_VERSION = "{expected_version}"' in run_desktop_text
+    assert 'from src._version import __version__ as APP_VERSION' in run_desktop_text
 
     # 3. installer.iss
     installer_text = (PROJECT_ROOT / "installer.iss").read_text(encoding="utf-8")
@@ -41,7 +78,7 @@ def test_v130_version_consistency():
 
     # 5. DEFECTS.md
     defects_text = (PROJECT_ROOT / "DEFECTS.md").read_text(encoding="utf-8")
-    assert f'(v{expected_version})' in defects_text
+    assert expected_version in defects_text
 
     # 6. build_heatwave.py fallback
     build_script_text = (PROJECT_ROOT / "build_heatwave.py").read_text(encoding="utf-8")

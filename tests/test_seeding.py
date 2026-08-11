@@ -8,7 +8,7 @@ from src.seeding.seeder import (
     seed_event,
     format_heat_sheet,
 )
-from src.parser.extractor import extract_text_from_pdf, parse_events_from_text
+from src.parser.extractor import parse_pdf_via_spatial_engine, parse_events_from_text
 from src.models.schemas import Entry, Swimmer
 
 
@@ -127,8 +127,7 @@ def test_seeding_with_real_data():
     
     # Extract and parse events from sample PDF
     pdf_path = "data/samples/1769543968773-7a7qa8q6s.pdf"
-    text = extract_text_from_pdf(pdf_path)
-    events, _val = parse_events_from_text(text)
+    events, _val = parse_pdf_via_spatial_engine(pdf_path)
     
     print(f"Parsed {len(events)} events from PDF")
     
@@ -179,6 +178,70 @@ def test_seeding_with_real_data():
         assert len(heat_sheet.assignments) == len(test_event.entries)
         
         print("✓ Relay event seeding tests passed")
+
+
+def test_sub_minute_time_to_seconds():
+    """Sub-minute seed times (SS.XX) parse to seconds and sort correctly."""
+    assert time_to_seconds("25.50") == 25.50
+    assert time_to_seconds("59.99") == 59.99
+    assert time_to_seconds("1:02.15") == 62.15
+    assert time_to_seconds("NT") == float('inf')
+
+
+def test_partial_heat_center_out_seeding():
+    """Verify that an 11-swimmer event in an 8-lane pool assigns Heat 1 (3 swimmers) to center lanes [4, 5, 3]."""
+    from src.models.schemas import Event as EventModel
+    swimmers = [Swimmer(name=f"Swimmer {i}", age=12, team_code=f"TEAM{i}") for i in range(1, 12)]
+    entries = [
+        Entry(place=i, swimmer=swimmers[i-1], seed_time=f"1:{30-i:02d}.00")
+        for i in range(1, 12)
+    ]
+    event = EventModel(number=1, name="100 Free", gender="Girls", distance=100, stroke="Freestyle", entries=entries)
+
+    heat_sheet = seed_event(event, lanes=8)
+
+    assert heat_sheet.heats == 2
+    heat_1_assignments = [a for a in heat_sheet.assignments if a.heat == 1]
+    assert len(heat_1_assignments) == 3
+
+    # Check assigned lanes for Heat 1: center-out for 8 lanes order is [4, 5, 3, 6, 2, 7, 1, 8]
+    # First 3 placed swimmers get lanes 4, 5, 3
+    heat_1_lanes = [a.lane for a in heat_1_assignments]
+    assert sorted(heat_1_lanes) == [3, 4, 5], f"Expected Heat 1 lanes [3, 4, 5], got {sorted(heat_1_lanes)}"
+
+
+def test_nt_entries_seeded_slowest_outside_lanes():
+    """Confirm that 2 NT swimmers in a 9-swimmer event sort into Heat 1 (slowest) / Heat 2 outside lane."""
+    from src.models.schemas import Event as EventModel
+    swimmers = [Swimmer(name=f"Swimmer {i}", age=12, team_code="TEAM") for i in range(1, 10)]
+    entries = [
+        Entry(place=1, swimmer=swimmers[0], seed_time="25.00"),
+        Entry(place=2, swimmer=swimmers[1], seed_time="26.00"),
+        Entry(place=3, swimmer=swimmers[2], seed_time="27.00"),
+        Entry(place=4, swimmer=swimmers[3], seed_time="28.00"),
+        Entry(place=5, swimmer=swimmers[4], seed_time="29.00"),
+        Entry(place=6, swimmer=swimmers[5], seed_time="30.00"),
+        Entry(place=7, swimmer=swimmers[6], seed_time="31.00"),
+        Entry(place=8, swimmer=swimmers[7], seed_time="NT"),
+        Entry(place=9, swimmer=swimmers[8], seed_time="NT"),
+    ]
+    event = EventModel(number=1, name="50 Free", gender="Boys", distance=50, stroke="Freestyle", entries=entries)
+
+    heat_sheet = seed_event(event, lanes=8)
+
+    assert heat_sheet.heats == 2
+    # 9 entries % 8 = 1 remainder. Heat 1 has 1 swimmer (slowest = NT). Heat 2 has 8 swimmers (1 NT + 7 timed).
+    h1_entries = [a for a in heat_sheet.assignments if a.heat == 1]
+    h2_entries = [a for a in heat_sheet.assignments if a.heat == 2]
+    assert len(h1_entries) == 1
+    assert len(h2_entries) == 8
+
+    # Heat 1 swimmer must be NT
+    assert h1_entries[0].entry.seed_time == "NT"
+
+    # In Heat 2 (8 swimmers), the NT swimmer is the slowest, so placed last in center-out order -> lane 8 (outside lane)
+    h2_nt_assignment = next(a for a in h2_entries if a.entry.seed_time == "NT")
+    assert h2_nt_assignment.lane in {1, 8}, f"Expected NT in Heat 2 to get outside lane (1 or 8), got lane {h2_nt_assignment.lane}"
 
 
 if __name__ == "__main__":

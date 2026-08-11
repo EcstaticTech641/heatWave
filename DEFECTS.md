@@ -1,6 +1,6 @@
 # heatWave Known Defects & Format Scope Boundaries
 
-This document formalizes supported psych sheet format boundaries, documented limitations, and tracked defect logs for **heatWave** (v1.3.0).
+This document formalizes supported psych sheet format boundaries, documented limitations, and tracked defect logs for **heatWave** (v1.3.1).
 
 ---
 
@@ -12,6 +12,12 @@ This document formalizes supported psych sheet format boundaries, documented lim
   - Standard two-column text PDFs (`Event N ...` headers and numbered entry lists)
 - **TeamUnify Psych Sheets:**
   - Standard text-based psych sheet layouts (`#N` or `Event N` header patterns)
+
+### Relay Event Parsing Boundary
+
+- **Relay team entries are parsed and seeded** using Team Name, Relay Letter (A/B/C), and Entry Time.
+- **Relay Leg Swimmers:** Individual relay leg athlete names are **not extracted** in v1.3.1. Multi-line relay leg blocks (listing individual swimmer splits) are parsed at the structural level only; the `RelayEntry.swimmers` field is reserved for a future release (post-v1.4.0).
+- **Rationale:** Relay leg name formatting varies across Hy-Tek versions and multi-column layouts. Relay seeding is strictly time-based and does not require individual leg names.
 
 ---
 

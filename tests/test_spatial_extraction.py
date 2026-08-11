@@ -21,10 +21,9 @@ _SAMPLE_2COL = "data/samples/1769543968773-7a7qa8q6s.pdf"
 # ---------------------------------------------------------------------------
 
 def _load_baseline_events(pdf_path: str):
-    """Run the legacy two-step pipeline to establish a baseline event list."""
-    from src.parser.extractor import extract_text_from_pdf, parse_events_from_text
-    text = extract_text_from_pdf(pdf_path)
-    events, _val = parse_events_from_text(text)
+    """Run spatial engine with default 2-column fallback to establish baseline event list."""
+    from src.parser.extractor import parse_pdf_via_spatial_engine
+    events, _val = parse_pdf_via_spatial_engine(pdf_path, column_override=2)
     return events
 
 

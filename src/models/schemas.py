@@ -65,4 +65,5 @@ class ValidationResult(BaseModel):
     warnings: List[str] = []
     errors: List[str] = []
     confidence_score: float = 1.0
+    pdf_producer: Optional[str] = None
 

@@ -19,7 +19,7 @@ import time
 import urllib.request
 import webview
 
-APP_VERSION = "1.3.0"
+from src._version import __version__ as APP_VERSION
 DEFAULT_PORT = 8501
 MAX_WAIT_SECONDS = 30  # maximum time to wait for Streamlit to start
 

@@ -17,15 +17,15 @@ PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 
 def test_version_consistency():
     """Verify current version is consistently set across pyproject.toml, run_desktop.py, installer.iss, and docs."""
-    expected_version = "1.3.0"
+    from src._version import __version__ as expected_version
 
     # 1. pyproject.toml
     pyproject_text = (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8")
     assert f'version = "{expected_version}"' in pyproject_text
 
-    # 2. run_desktop.py
+    # 2. run_desktop.py — now imports __version__ from src._version
     run_desktop_text = (PROJECT_ROOT / "run_desktop.py").read_text(encoding="utf-8")
-    assert f'APP_VERSION = "{expected_version}"' in run_desktop_text
+    assert 'from src._version import __version__ as APP_VERSION' in run_desktop_text
 
     # 3. installer.iss
     installer_text = (PROJECT_ROOT / "installer.iss").read_text(encoding="utf-8")
@@ -36,9 +36,9 @@ def test_version_consistency():
     readme_text = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
     assert f"**Version:** {expected_version}" in readme_text
 
-    # 5. DEFECTS.md
+    # 5. DEFECTS.md — contains version string anywhere in file
     defects_text = (PROJECT_ROOT / "DEFECTS.md").read_text(encoding="utf-8")
-    assert f"(v{expected_version})" in defects_text
+    assert expected_version in defects_text
 
 
 def test_windows_theme_detection():

@@ -1,7 +1,7 @@
 Event 1  Girls 10 & Under 50 Yard Freestyle
-1 Smith, Emily S           10 MAC-NC      28.45
-2 De La Cruz, Maria        10 TYDE-NC     29.10
-3 Jones, Sarah               9 YOTA-NC     31.05  NT
+1 Doe, Jane A              10 MAC-NC      28.45
+2 Smith, Mary B            10 TYDE-NC     29.10
+3 Johnson, Sarah C          9 YOTA-NC     31.05  NT
 
 Event 12  Boys 11-12 100 Yard Butterfly
-1 Meek, Keaston            10 Bartlesville Spl-OK 2:42.05
+1 Doe, John                10 Team A-OK   2:42.05

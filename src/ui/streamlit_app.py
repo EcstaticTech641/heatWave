@@ -12,7 +12,6 @@ import streamlit as st
 from datetime import datetime
 
 from src.parser.extractor import (
-    extract_text_from_pdf,
     parse_events_from_text,
     parse_pdf_via_spatial_engine,
 )
@@ -28,6 +27,7 @@ from src.models.schemas import SessionConfig, ValidationResult
 from src.utils.cleanup import start_cleanup_daemon, clear_directory, cleanup_old_files
 from src.utils.printer import list_windows_printers, print_pdf_file
 from src.utils.updater import check_for_updates
+from src._version import __version__
 
 
 def sanitize_file_name(value: str) -> str:
@@ -398,13 +398,13 @@ def main():
     # Sidebar — About & Privacy-Safe Update Checker
     with st.sidebar:
         st.markdown("### ℹ️ About & Updates")
-        st.markdown("**heatWave Desktop v1.3.0**")
+        st.markdown(f"**heatWave Desktop v{__version__}**")
         st.markdown("*100% Offline • Zero Telemetry*")
         st.markdown("---")
         
         if st.button("Check for Updates", key="btn_check_updates", width='stretch'):
             with st.spinner("Checking GitHub Releases..."):
-                res = check_for_updates("1.3.0")
+                res = check_for_updates(__version__)
                 st.session_state.update_check_result = res
 
         upd = st.session_state.get("update_check_result")
@@ -420,7 +420,7 @@ def main():
                 url = upd.get("download_url", "https://github.com/EcstaticTech641/heatWave/releases")
                 st.markdown(f"[👉 Download Update on GitHub]({url})")
             else:
-                st.success("✅ Running latest version (v1.3.0).")
+                st.success(f"✅ Running latest version (v{__version__}).")
 
     # Header
     st.markdown('<div class="main-header"> heatWave</div>', unsafe_allow_html=True)
@@ -1109,6 +1109,11 @@ def main():
                             type="primary",
                             width='stretch',
                             key="spool_pdf_btn",
+                            help=(
+                                "Beta feature. Verify printer is online and selected before use. "
+                                "Spooling is 100% offline via local Windows print spooler with zero data leaving your machine. "
+                                "Virtual printers (PDF/XPS) are blocked; use the Download button above for those."
+                            ),
                         ):
                             with st.spinner(f"Spooling heat sheet to '{selected_printer}'..."):
                                 try:

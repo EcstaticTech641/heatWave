@@ -29,14 +29,14 @@ def test_hytek_baseline_success():
     assert e1.gender == "Girls"
     assert len(e1.entries) == 3  # 1 NT entry succeeds, 2 under-minute entries fallback as low confidence
     
-    # Low-confidence fallback entries
-    assert e1.entries[0].low_confidence is True
-    assert e1.entries[0].swimmer.name == "Smith, Emily S"
+    # High-confidence entries now supported for sub-minute SS.XX times (e.g. 28.45)
+    assert e1.entries[0].low_confidence is False
+    assert e1.entries[0].swimmer.name == "Doe, Jane A"
     assert e1.entries[0].seed_time == "28.45"
     
     # Successful NT entry
     assert e1.entries[2].low_confidence is False
-    assert e1.entries[2].swimmer.name == "Jones, Sarah"
+    assert e1.entries[2].swimmer.name == "Johnson, Sarah C"
     assert e1.entries[2].seed_time == "NT"
 
     
@@ -45,7 +45,7 @@ def test_hytek_baseline_success():
     assert e2.number == 12
     assert e2.gender == "Boys"
     assert len(e2.entries) == 1
-    assert e2.entries[0].swimmer.name == "Meek, Keaston"
+    assert e2.entries[0].swimmer.name == "Doe, John"
     assert e2.entries[0].seed_time == "2:42.05"
 
 
@@ -73,7 +73,7 @@ def test_teamunify_baseline_success():
     # Entry 1
     entry1 = e1.entries[0]
     assert entry1.place == 1
-    assert entry1.swimmer.name == "Smith, Emily S"
+    assert entry1.swimmer.name == "Doe, Jane A"
     assert entry1.swimmer.age == 10
     assert entry1.swimmer.team_code == "MAC"
     assert entry1.seed_time == "28.45"  # group 5 matched "28.45"
@@ -81,7 +81,7 @@ def test_teamunify_baseline_success():
     # Entry 3
     entry3 = e1.entries[2]
     assert entry3.place == 3
-    assert entry3.swimmer.name == "Jones, Sarah"
+    assert entry3.swimmer.name == "Johnson, Sarah C"
     assert entry3.swimmer.age == 9
     assert entry3.swimmer.team_code == "YOTA"
     assert entry3.seed_time == "NT"

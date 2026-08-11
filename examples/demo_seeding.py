@@ -2,7 +2,7 @@
 Demonstration of the complete heat seeding pipeline.
 Extracts events from PDF, seeds them, and displays formatted heat sheets.
 """
-from src.parser.extractor import extract_text_from_pdf, parse_events_from_text
+from src.parser.extractor import parse_pdf_via_spatial_engine
 from src.seeding.seeder import seed_event, format_heat_sheet
 
 
@@ -13,11 +13,8 @@ def main():
     
     # Extract and parse
     pdf_path = "data/samples/1769543968773-7a7qa8q6s.pdf"
-    print(f"\nExtracting text from: {pdf_path}")
-    text = extract_text_from_pdf(pdf_path)
-    
-    print("Parsing events...")
-    events, _val = parse_events_from_text(text)
+    print(f"\nParsing events from PDF: {pdf_path}")
+    events, _val = parse_pdf_via_spatial_engine(pdf_path)
     print(f"Successfully parsed {len(events)} events\n")
     
     # Separate into relay and individual events

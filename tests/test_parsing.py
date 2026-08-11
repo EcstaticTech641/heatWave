@@ -2,7 +2,7 @@
 Test suite for event and entry parsing logic.
 """
 from src.parser.extractor import (
-    extract_text_from_pdf,
+    parse_pdf_via_spatial_engine,
     parse_event_header,
     parse_individual_entry,
     parse_relay_entry,
@@ -52,23 +52,23 @@ def test_individual_entry_parsing():
     print("Testing individual entry parsing...")
     
     # Format: place name age team seed_time
-    line1 = "1 Meek, Keaston 10 Bartlesville Spl-OK 2:42.05"
+    line1 = "1 Doe, John 10 Team A-OK 2:42.05"
     result = parse_individual_entry(line1)
     assert result is not None
     place, name, age, team, seed = result
     assert place == 1
-    assert "Keaston" in name
+    assert "John" in name
     assert age == 10
-    assert "Bartlesville" in team
+    assert "Team A" in team
     assert seed == "2:42.05"
     
     # Test with longer names
-    line2 = "26 Sunarto, Lily 10 Life Time Fitnes-OK 4:23.38L"
+    line2 = "26 Smith, Jane 10 Team B-OK 4:23.38L"
     result = parse_individual_entry(line2)
     assert result is not None
     place, name, age, team, seed = result
     assert place == 26
-    assert "Lily" in name
+    assert "Jane" in name
     assert age == 10
     
     print("✓ Individual entry parsing tests passed")
@@ -79,16 +79,16 @@ def test_relay_entry_parsing():
     print("Testing relay entry parsing...")
     
     # Format: place team_name seed_time
-    line1 = "1 King Marlin Swim-OK A 2:13.43"
+    line1 = "1 Team A-OK A 2:13.43"
     result = parse_relay_entry(line1)
     assert result is not None
     place, team, seed = result
     assert place == 1
-    assert "King Marlin" in team
+    assert "Team A" in team
     assert seed == "2:13.43"
     
     # Test another format
-    line2 = "5 Jenks Trojan Swi-OK B 2:30.93"
+    line2 = "5 Team B-OK B 2:30.93"
     result = parse_relay_entry(line2)
     assert result is not None
     place, team, seed = result
@@ -98,20 +98,15 @@ def test_relay_entry_parsing():
 
 
 def test_full_extraction_and_parsing():
-    """Test full PDF extraction and event parsing."""
-    print("\nTesting full PDF extraction and parsing...")
+    """Test full PDF extraction and event parsing via spatial engine."""
+    print("\nTesting full PDF spatial extraction and parsing...")
     
     pdf_path = "data/samples/1769543968773-7a7qa8q6s.pdf"
     
-    # Extract text
-    text = extract_text_from_pdf(pdf_path)
-    assert len(text) > 100
-    print(f"✓ Extracted {len(text)} characters from PDF")
-    
-    # Parse events
-    events, _val = parse_events_from_text(text)
+    # Parse events via spatial engine
+    events, validation = parse_pdf_via_spatial_engine(pdf_path)
     assert len(events) > 0
-    print(f"✓ Parsed {len(events)} events from text")
+    print(f"✓ Parsed {len(events)} events from PDF")
     
     # Check first event details
     if events:
@@ -133,10 +128,19 @@ def test_full_extraction_and_parsing():
     # Display summary
     print(f"\nParsing Summary:")
     for event in events[:5]:  # Show first 5 events
-        entry_type = "Individual" if events[0].entries and hasattr(events[0].entries[0], 'swimmer') else "Relay"
         print(f"  Event {event.number}: {event.gender} {event.distance}Y {event.stroke} ({len(event.entries)} entries)")
     
-    print("\n✓ Full extraction and parsing tests passed")
+    print("\n✓ Full spatial extraction and parsing tests passed")
+
+
+def test_relay_parse_ssxx_accepted():
+    """Relay entries with SS.XX sub-minute times must parse cleanly without returning None."""
+    from src.parser.extractor import parse_relay_entry
+    result = parse_relay_entry("2 Valley Swim Club A 59.87")
+    assert result is not None, "parse_relay_entry returned None for valid SS.XX seed time"
+    place, team_name, seed_time = result
+    assert place == 2
+    assert seed_time == "59.87"
 
 
 if __name__ == "__main__":

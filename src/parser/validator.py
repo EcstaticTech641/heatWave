@@ -18,20 +18,29 @@ def _parse_time_to_seconds(time_str: str) -> float | None:
     return None
 
 
-def validate_parsed_events(events: List[Event]) -> ValidationResult:
+def validate_parsed_events(events: List[Event], pdf_producer: str | None = None) -> ValidationResult:
     """Runs automated validation and sanity checks on extracted Event objects.
 
     Args:
         events: List of Event objects parsed from psych sheet.
+        pdf_producer: Optional PDF Creator/Producer metadata string.
 
     Returns:
         ValidationResult object containing is_valid status, warnings, errors,
-        and confidence_score (0.0 to 1.0).
+        confidence_score (0.0 to 1.0), and pdf_producer.
     """
     warnings: List[str] = []
     errors: List[str] = []
     confidence_score = 1.0
     is_valid = True
+
+    # ------------------------------------------------------------------------
+    # Check 0: PDF Producer Metadata Check
+    # ------------------------------------------------------------------------
+    if pdf_producer:
+        producer_upper = pdf_producer.upper()
+        if not ("HY-TEK" in producer_upper or "MEET MANAGER" in producer_upper):
+            warnings.append("Unrecognized PDF producer string. Verify output layout.")
 
     # ------------------------------------------------------------------------
     # Check 1: Non-Empty Meet
@@ -49,27 +58,23 @@ def validate_parsed_events(events: List[Event]) -> ValidationResult:
         )
 
     # ------------------------------------------------------------------------
-    # Check 2: Merged Column Detection (Entry Count Thresholds)
+    # Check 2: Large Entry Count Thresholds (Soft warnings only)
     # ------------------------------------------------------------------------
-    hard_merged_cols = False
-    soft_merged_cols = False
+    large_entry_count = False
     for e in events:
         entry_count = len(e.entries)
-        if entry_count > 120:
-            hard_merged_cols = True
-            errors.append(
-                f"Event {e.number} has {entry_count} entries (exceeds max threshold 120). Likely merged columns."
+        if entry_count > 250:
+            large_entry_count = True
+            warnings.append(
+                f"Large entry count ({entry_count}) in Event {e.number} — verify layout."
             )
         elif entry_count > 80:
-            soft_merged_cols = True
+            large_entry_count = True
             warnings.append(
                 f"Large entry count ({entry_count}) in Event {e.number} — verify this is correct."
             )
 
-    if hard_merged_cols:
-        is_valid = False
-        confidence_score -= 0.30
-    elif soft_merged_cols:
+    if large_entry_count:
         confidence_score -= 0.05
 
     # ------------------------------------------------------------------------
@@ -84,16 +89,22 @@ def validate_parsed_events(events: List[Event]) -> ValidationResult:
     if athlete_names:
         passing_names = 0
         for name in athlete_names:
-            # Must match Last, First pattern (at least 1 char each) and contain no digits
-            if re.match(r"^[A-Za-z\s'\-\.]+\,\s*[A-Za-z\s'\-\.]+", name) and not re.search(r"\d", name):
+            # Must match Last, First pattern — allow Unicode letters for accented names
+            # (e.g. Andrés, Müller, O'Brien). Digits in name are still rejected.
+            if (
+                re.match(r"^[\w\s'\-\.]+\,\s*[\w\s'\-\.]+", name, re.UNICODE)
+                and not re.search(r"\d", name)
+            ):
                 passing_names += 1
 
         pass_rate = passing_names / len(athlete_names)
+        # All Check 3 outcomes are soft confidence penalties only.
+        # is_valid=False is reserved for structural failures (Checks 1 & 2).
         if pass_rate < 0.50:
-            is_valid = False
-            confidence_score -= 0.30
-            errors.append(
-                f"Name integrity check failed: only {pass_rate:.1%} of athlete names match expected format."
+            confidence_score -= 0.20
+            warnings.append(
+                f"Low athlete name integrity: only {pass_rate:.1%} of athlete names match "
+                f"expected 'Last, First' format. Possible column drift or non-standard formatting."
             )
         elif pass_rate < 0.90:
             confidence_score -= 0.10
@@ -106,6 +117,7 @@ def validate_parsed_events(events: List[Event]) -> ValidationResult:
     # ------------------------------------------------------------------------
     # Check 4a: Seed Time Format Check
     # ------------------------------------------------------------------------
+    from src.parser.extractor import normalize_seed_time
     all_times: List[str] = []
     for e in events:
         for entry in e.entries:
@@ -114,7 +126,7 @@ def validate_parsed_events(events: List[Event]) -> ValidationResult:
     if all_times:
         valid_format_count = 0
         for t in all_times:
-            ts = t.strip().upper()
+            ts = normalize_seed_time(t)
             if (
                 ts == "NT"
                 or re.match(r"^\d{1,2}:\d{2}\.\d{2}$", ts)
@@ -175,4 +187,5 @@ def validate_parsed_events(events: List[Event]) -> ValidationResult:
         warnings=warnings,
         errors=errors,
         confidence_score=confidence_score,
+        pdf_producer=pdf_producer,
     )

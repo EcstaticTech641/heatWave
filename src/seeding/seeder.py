@@ -17,10 +17,15 @@ def time_to_seconds(time_str: str) -> float:
         return float('inf')
     
     try:
-        parts = time_str.split(":")
-        minutes = int(parts[0])
-        seconds = float(parts[1])
-        return minutes * 60 + seconds
+        if ":" in time_str:
+            # MM:SS.XX format
+            parts = time_str.split(":")
+            minutes = int(parts[0])
+            seconds = float(parts[1])
+            return minutes * 60 + seconds
+        else:
+            # SS.XX format (sub-minute times, e.g. "25.50")
+            return float(time_str)
     except (IndexError, ValueError):
         return float('inf')
 

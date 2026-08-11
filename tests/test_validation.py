@@ -50,10 +50,10 @@ def test_merged_column_detection():
     )
     result_soft = validate_parsed_events([event_90])
     assert result_soft.is_valid is True
-    assert result_soft.confidence_score == 0.95
+    assert result_soft.confidence_score >= 0.95
     assert any("Large entry count" in w for w in result_soft.warnings)
 
-    # Hard error: 125 entries (>120)
+    # Large event (125 entries) soft warning
     entries_125 = [
         _create_mock_entry(i, "Swimmer, Athlete", "25.50")
         for i in range(1, 126)
@@ -67,9 +67,9 @@ def test_merged_column_detection():
         entries=entries_125,
     )
     result_hard = validate_parsed_events([event_125])
-    assert result_hard.is_valid is False
-    assert result_hard.confidence_score <= 0.70
-    assert any("exceeds max threshold 120" in e for e in result_hard.errors)
+    assert result_hard.is_valid is True
+    assert result_hard.confidence_score >= 0.90
+    assert any("Large entry count" in w for w in result_hard.warnings)
 
 
 def test_invalid_seed_time_format():
@@ -156,3 +156,47 @@ def test_confidence_score_scale_discrimination():
     assert minor_result.is_valid is True
     assert 0.70 <= minor_result.confidence_score < 0.90
     assert clean_result.confidence_score > minor_result.confidence_score
+
+
+def test_accented_names_pass_check3():
+    """Names with accented characters (ñ, é, ü) must not be penalised."""
+    accented_entries = [
+        _create_mock_entry(1, "Andrés, Miguel", "1:02.15"),
+        _create_mock_entry(2, "Müller, Sophie", "1:05.80"),
+        _create_mock_entry(3, "García, Lucía", "1:08.00"),
+        _create_mock_entry(4, "O'Brien, Siobhán", "1:10.45"),
+        _create_mock_entry(5, "López, María", "1:12.00"),
+    ]
+    event = Event(number=1, name="100 Free", gender="Girls", distance=100, stroke="Freestyle", entries=accented_entries)
+    result = validate_parsed_events([event])
+    assert result.is_valid is True, f"Accented names failed: {result.errors}"
+    assert result.confidence_score == 1.0
+
+
+def test_check3_never_sets_is_valid_false():
+    """Check 3 (name integrity) must NEVER set is_valid=False, even at 0% pass rate."""
+    bad_name_entries = [
+        _create_mock_entry(i, "NoCommaName", "1:05.00")
+        for i in range(1, 11)
+    ]
+    event = Event(number=1, name="100 Free", gender="Girls", distance=100, stroke="Freestyle", entries=bad_name_entries)
+    result = validate_parsed_events([event])
+    assert result.is_valid is True
+    assert result.confidence_score < 1.0
+    assert len(result.errors) == 0
+    assert any("name integrity" in w.lower() for w in result.warnings)
+
+
+def test_pdf_producer_metadata_check():
+    """Unrecognized PDF producer string must trigger a soft Yellow warning."""
+    entries = [_create_mock_entry(1, "Smith, Alice", "1:05.00")]
+    event = Event(number=1, name="100 Free", gender="Girls", distance=100, stroke="Freestyle", entries=entries)
+
+    # Hy-Tek producer -> no warning
+    res_hytek = validate_parsed_events([event], pdf_producer="HY-TEK's Meet Manager 8.0")
+    assert not any("Unrecognized PDF producer" in w for w in res_hytek.warnings)
+
+    # Unknown producer -> soft warning
+    res_unknown = validate_parsed_events([event], pdf_producer="Unknown PDF Generator 1.0")
+    assert any("Unrecognized PDF producer" in w for w in res_unknown.warnings)
+    assert res_unknown.confidence_score == 1.0

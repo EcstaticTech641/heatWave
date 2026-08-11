@@ -280,8 +280,11 @@ def parse_pdf_via_spatial_engine(
     previous_boundaries: List[Tuple[float, float]] | None = None
     layout_confidence_low = False
 
+    pdf_producer: str | None = None
     with pdfplumber.open(pdf_path) as pdf:
         num_pages = len(pdf.pages)
+        if pdf.metadata:
+            pdf_producer = pdf.metadata.get("Producer") or pdf.metadata.get("producer") or None
 
     for page_num in range(num_pages):
         spatial_lines = extract_spatial_words_to_lines(pdf_path, page_num)
@@ -325,7 +328,7 @@ def parse_pdf_via_spatial_engine(
         event.layout_confidence_low = layout_confidence_low
         event.auto_layout_failed = auto_layout_failed
 
-    validation = validate_parsed_events(events)
+    validation = validate_parsed_events(events, pdf_producer=pdf_producer)
     return events, validation
 
 
@@ -395,36 +398,31 @@ def detect_source_format(raw_text: str) -> str:
 
 
 
-def extract_text_from_pdf(pdf_path: str) -> str:
-    """
-    Extract text from a Psych Sheet PDF.
-    Handles the two-column layout parsing by extracting left and right columns separately.
-    
-    Returns:
-        Full text with columns merged in reading order.
-    """
-    with pdfplumber.open(pdf_path) as pdf:
-        full_text = ""
-        for page_num, page in enumerate(pdf.pages):
-            width = page.width
-            height = page.height
-            
-            # Crop left and right columns
-            left_bbox = (0, 0, width / 2, height)
-            right_bbox = (width / 2, 0, width, height)
-            
-            left_col = page.crop(left_bbox)
-            right_col = page.crop(right_bbox)
-            
-            left_text = left_col.extract_text() or ""
-            right_text = right_col.extract_text() or ""
-            
-            # Merge columns intelligently (left then right)
-            if page_num > 0:
-                full_text += "\n"
-            full_text += left_text + "\n" + right_text
-        
-        return full_text
+HEADER_FOOTER_PATTERNS = [
+    r"HY-TEK's MEET MANAGER.*Page \d+",                 # Page footer
+    r"\bPage\s+\d+\s*$",                                # Standalone Page N
+    r"^\d{4}\b.*?\bPsych Sheet\b",                      # Meet title header
+    r"^\d{4}\b.*?\b\d{1,2}/\d{1,2}/\d{4}\b",            # Meet date header (e.g. 2025 OKS... 7/18/2025)
+    r"^\s*Psych Sheet\s*$",                             # Psych Sheet title
+    r"^Event\s+\d+[\s\.]*\([^)]*\)",                    # Event continuation header: Event 9 ...(Girls 10 & Under 100 Yard IM)
+    r"^Event\s+\d+[\s\.]+\.\.\.",                       # Event continuation pattern: Event 9 ...
+    r"\(Continued\)",                                   # (Continued) text anywhere
+    r"^\s*Name\s+Age\s+Team\s+Seed Time",               # Column header
+    r"^\s*Team\s+Relay\s+Seed",                         # Relay column header
+    r"^\s*Licensed To:.*",                              # Licensing header
+    r".*For Office Use Only.*",                         # Administrative header
+]
+
+
+def is_header_or_footer_line(line: str) -> bool:
+    """Returns True if line is a psych sheet page header, footer, or continuation banner."""
+    cleaned = line.strip()
+    if not cleaned:
+        return True
+    for pattern in HEADER_FOOTER_PATTERNS:
+        if re.search(pattern, cleaned, re.IGNORECASE):
+            return True
+    return False
 
 
 def parse_event_header(line: str) -> Tuple[int, str, str, int, str] | None:
@@ -434,10 +432,15 @@ def parse_event_header(line: str) -> Tuple[int, str, str, int, str] | None:
     Returns:
         Tuple of (event_number, gender, event_name, distance, stroke) or None if not matched.
     """
-    # Pattern: Event N Gender AgeGroup DistanceYards StrokeStroke...
+    cleaned = line.strip()
+    # Reject continuation headers like "Event 9 ...(Girls 10 & Under 100 Yard IM)"
+    if "..." in cleaned or "(continued)" in cleaned.lower():
+        return None
+
+    # Pattern: Event N Gender AgeGroup DistanceYards Stroke...
     pattern = r"Event\s+(\d+)\s+(Girls|Boys|Women|Men)\s+(.+?)\s+(\d+)\s+Yard\s+(.+?)(?:\s+Relay)?$"
     
-    match = re.match(pattern, line.strip())
+    match = re.match(pattern, cleaned)
     if match:
         event_num = int(match.group(1))
         gender = match.group(2)
@@ -450,15 +453,11 @@ def parse_event_header(line: str) -> Tuple[int, str, str, int, str] | None:
         
         return (event_num, gender, event_name, distance, stroke)
 
-    
     return None
 
 
-
-
-
 def normalize_seed_time(time_str: str) -> str:
-    """Normalizes seed times by removing course suffixes and enforcing standard format.
+    """Normalizes seed times by removing course/standard prefixes/suffixes and enforcing standard format.
 
     Args:
         time_str: The raw seed time string.
@@ -470,10 +469,14 @@ def normalize_seed_time(time_str: str) -> str:
     if not cleaned or cleaned in ["NT", "NO TIME", "N.T."]:
         return "NT"
     
-    # Strip course suffixes: Y, L, S
-    if cleaned[-1] in ["Y", "L", "S"]:
-        cleaned = cleaned[:-1].strip()
-    
+    # Strip course/standard prefixes and suffixes: Y, L, S, B, A, X
+    cleaned = re.sub(r"^[A-Za-z\s]+", "", cleaned)
+    cleaned = re.sub(r"[A-Za-z\s]+$", "", cleaned)
+    cleaned = cleaned.strip()
+
+    if not cleaned:
+        return "NT"
+
     # Handle partial formats (e.g. MM:SS -> MM:SS.00)
     if re.match(r"^\d+:\d{2}$", cleaned):
         cleaned = cleaned + ".00"
@@ -511,15 +514,13 @@ def parse_seed_time(time_str: str) -> str:
 
 def parse_individual_entry(line: str) -> Tuple[int, str, int, str, str] | None:
     """
-    Parse individual swimmer entry: "1 Meek, Keaston 10 Bartlesville Spl-OK 2:42.05"
+    Parse individual swimmer entry: "1 Doe, John 10 Team A-OK 2:42.05"
     
     Returns:
         Tuple of (place, swimmer_name, age, team_code, seed_time) or None if not matched.
     """
-    # Pattern: place name age team seed_time
     parts = line.split()
-    
-    if len(parts) < 5:
+    if len(parts) < 3:
         return None
     
     try:
@@ -527,46 +528,72 @@ def parse_individual_entry(line: str) -> Tuple[int, str, int, str, str] | None:
     except ValueError:
         return None
     
-    # Work backwards: seed_time is last, age is a number that comes before team
-    # Find seed_time (last part, should match time pattern)
-    seed_time_str = parts[-1]
-    if not (re.match(r"^\d+:\d{2}", seed_time_str) or seed_time_str.upper() == "NT"):
-        return None
+    # Check if last token is standalone course letter (e.g. "27.45 L" or "27.45 Y")
+    has_course = False
+    if (
+        len(parts) >= 6
+        and parts[-1].upper() in ["Y", "L", "S", "B", "A", "X"]
+        and re.search(r"\d", parts[-2])
+    ):
+        seed_time_raw = parts[-2]
+        has_course = True
+    else:
+        seed_time_raw = parts[-1]
+
+    seed_time = parse_seed_time(seed_time_raw)
     
-    seed_time = parse_seed_time(seed_time_str)
-    
-    # Find age: scan from end backwards (before seed_time) looking for age pattern
-    # Age is typically 1-2 digits, and comes after name, before team
+    is_valid_time = bool(
+        re.match(r"^\d+:\d{2}\.\d{2}$", seed_time)
+        or re.match(r"^\d{1,2}\.\d{2}$", seed_time)
+        or seed_time == "NT"
+    )
+
+    if is_valid_time:
+        if has_course:
+            parts_for_name = parts[:-2]
+        else:
+            parts_for_name = parts[:-1]
+    else:
+        # No seed time token found at end of line; default to NT
+        seed_time = "NT"
+        parts_for_name = parts
+
+    # Find age: scan from end backwards looking for 1-2 digit number
     age = None
     age_idx = -1
     
-    for i in range(len(parts) - 2, 0, -1):  # Start before seed_time
-        if re.match(r"^\d{1,2}$", parts[i]):  # 1-2 digit number
+    for i in range(len(parts_for_name) - 1, 0, -1):
+        if re.match(r"^\d{1,2}$", parts_for_name[i]):
             try:
-                age = int(parts[i])
+                age = int(parts_for_name[i])
                 age_idx = i
                 break
             except ValueError:
                 continue
     
-    if age_idx < 2:  # Need at least place and name before age
+    if age_idx >= 2:
+        name = " ".join(parts_for_name[1:age_idx])
+        team_parts = parts_for_name[age_idx + 1:]
+        if not team_parts:
+            # Incomplete line cut off at page/column boundary (e.g. "2 Tyszko, Cade P 14")
+            return None
+        team_code = " ".join(team_parts)
+    else:
+        if len(parts_for_name) < 4:
+            return None
+        team_code = parts_for_name[-1]
+        name = " ".join(parts_for_name[1:-1])
+        age = None
+
+    if not name:
         return None
-    
-    # Name is everything between place and age
-    name = " ".join(parts[1:age_idx])
-    
-    # Team code is everything between age and seed_time
-    if age_idx + 1 >= len(parts) - 1:  # Make sure there's a team between age and seed_time
-        return None
-    
-    team_code = " ".join(parts[age_idx + 1:-1])
     
     return (place, name, age, team_code, seed_time)
 
 
 def parse_relay_entry(line: str) -> Tuple[int, str, str] | None:
     """
-    Parse relay entry: "1 King Marlin Swim-OK A 2:13.43"
+    Parse relay entry: "1 Team A-OK A 2:13.43"
     
     Returns:
         Tuple of (place, team_name, seed_time) or None if not matched.
@@ -583,7 +610,11 @@ def parse_relay_entry(line: str) -> Tuple[int, str, str] | None:
     
     # Find seed time (last part, should be MM:SS.XX or NT)
     seed_time_str = parts[-1]
-    if not (re.match(r"^\d+:\d{2}", seed_time_str) or seed_time_str.upper() == "NT"):
+    if not (
+        re.match(r"^\d+:\d{2}", seed_time_str)          # MM:SS.XX
+        or re.match(r"^\d{1,2}\.\d{2}$", seed_time_str) # SS.XX (sub-minute)
+        or seed_time_str.upper() == "NT"
+    ):
         return None
     
     # Team everything in between place and seed time
@@ -618,6 +649,10 @@ class HyTekParser(BasePsychSheetParser):
             if not line:
                 continue
             
+            # Skip page headers, footers, continuation banners, and column headers
+            if is_header_or_footer_line(line):
+                continue
+
             # Check for event header
             event_info = parse_event_header(line)
             if event_info:
@@ -637,11 +672,7 @@ class HyTekParser(BasePsychSheetParser):
                     entries=[]
                 )
                 continue
-            
-            # Skip header lines
-            if any(skip in line for skip in ["Name Age Team", "Team Relay Seed", "Seed Time", "HY-TEK"]):
-                continue
-            
+
             # Parse entries
             if current_event:
                 if is_relay_event:
@@ -654,20 +685,6 @@ class HyTekParser(BasePsychSheetParser):
                             seed_time=seed_time
                         )
                         current_event.entries.append(relay_entry)
-                    else:
-                        parts = line.split()
-                        if parts and parts[0].isdigit():
-                            place = int(parts[0])
-                            team_name = " ".join(parts[1:-1]) if len(parts) > 2 else "Unknown Team"
-                            seed_time = parts[-1] if len(parts) > 1 else "NT"
-                            relay_entry = RelayEntry(
-                                place=place,
-                                team_name=team_name,
-                                seed_time=seed_time,
-                                low_confidence=True,
-                                error_msg="Failed to parse relay entry format cleanly"
-                            )
-                            current_event.entries.append(relay_entry)
                 else:
                     entry_data = parse_individual_entry(line)
                     if entry_data:
@@ -675,38 +692,7 @@ class HyTekParser(BasePsychSheetParser):
                         swimmer = Swimmer(name=name, age=age, team_code=team_code)
                         entry = Entry(place=place, swimmer=swimmer, seed_time=seed_time)
                         current_event.entries.append(entry)
-                    else:
-                        parts = line.split()
-                        if parts and parts[0].isdigit():
-                            place = int(parts[0])
-                            name = " ".join(parts[1:-3]) if len(parts) > 4 else (" ".join(parts[1:-1]) if len(parts) > 2 else "Unknown Athlete")
-                            age = None
-                            team_code = "Unknown"
-                            for p in parts[1:-1]:
-                                if p.isdigit() and len(p) <= 2:
-                                    age = int(p)
-                                    break
-                            # Try to extract a team code (if we found age, look after it)
-                            age_idx = -1
-                            for i, p in enumerate(parts):
-                                if p.isdigit() and len(p) <= 2 and i > 0:
-                                    age_idx = i
-                                    break
-                            if age_idx != -1 and age_idx + 1 < len(parts) - 1:
-                                team_code = " ".join(parts[age_idx + 1:-1])
-                            
-                            seed_time = parts[-1] if len(parts) > 1 else "NT"
-                            swimmer = Swimmer(name=name, age=age, team_code=team_code)
-                            entry = Entry(
-                                place=place,
-                                swimmer=swimmer,
-                                seed_time=seed_time,
-                                low_confidence=True,
-                                error_msg="Failed to parse individual entry format cleanly"
-                            )
-                            current_event.entries.append(entry)
 
-        
         # Don't forget the last event
         if current_event:
             events.append(current_event)
@@ -777,36 +763,12 @@ class TeamUnifyParser(BasePsychSheetParser):
                     swimmer = Swimmer(name=full_name, age=age, team_code=team_code)
                     entry = Entry(place=seed_no, swimmer=swimmer, seed_time=raw_time)
                     current_event.entries.append(entry)
-                else:
-                    parts = line.split()
-                    if parts and parts[0].isdigit():
-                        place = int(parts[0])
-                        name = " ".join(parts[1:-3]) if len(parts) > 4 else (" ".join(parts[1:-1]) if len(parts) > 2 else "Unknown Athlete")
-                        age = None
-                        team_code = "Unknown"
-                        for p in parts[1:-1]:
-                            if p.isdigit() and len(p) <= 2:
-                                age = int(p)
-                                break
-                        # Try to extract team code
-                        age_idx = -1
-                        for i, p in enumerate(parts):
-                            if p.isdigit() and len(p) <= 2 and i > 0:
-                                age_idx = i
-                                break
-                        if age_idx != -1 and age_idx + 1 < len(parts) - 1:
-                            team_code = " ".join(parts[age_idx + 1:-1])
-                        
-                        seed_time = parts[-1] if len(parts) > 1 else "NT"
-                        swimmer = Swimmer(name=name, age=age, team_code=team_code)
-                        entry = Entry(
-                            place=place,
-                            swimmer=swimmer,
-                            seed_time=seed_time,
-                            low_confidence=True,
-                            error_msg="Failed to parse individual entry format cleanly"
-                        )
-                        current_event.entries.append(entry)
+
+        # Append the final event block left in the loop buffer
+        if current_event:
+            events.append(current_event)
+            
+        return events
 
 
         

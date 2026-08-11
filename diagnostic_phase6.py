@@ -10,7 +10,6 @@ from src.parser.extractor import (
     detect_column_boundaries,
     reconstruct_text_by_columns,
     parse_pdf_via_spatial_engine,
-    extract_text_from_pdf,
     parse_events_from_text,
     FALLBACK_2_COLUMN, FALLBACK_3_COLUMN,
     PAGE_WIDTH, NOISE_FLOOR, GUTTER_WIDTH_THRESHOLD,
@@ -93,15 +92,6 @@ with pdfplumber.open(PDF_3COL) as pdf:
 print(f"  Total pages: {n}")
 for pg in range(min(2, n)):
     analyse_page(PDF_3COL, pg, f"3COL p{pg}")
-
-# ── Legacy pipeline on 3-col ─────────────────────────────────────────────────
-print("\n\n" + "="*70)
-print("  3-COL: LEGACY PIPELINE")
-legacy_text = extract_text_from_pdf(PDF_3COL)
-print(f"  Text length: {len(legacy_text)}")
-print(f"  First 600 chars:\n---\n{legacy_text[:600]}\n---")
-legacy_events, _val1 = parse_events_from_text(legacy_text)
-print(f"  Events found: {len(legacy_events)}")
 
 # ── Spatial engine full run on 3-col ─────────────────────────────────────────
 print("\n\n" + "="*70)

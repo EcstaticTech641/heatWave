@@ -3,7 +3,7 @@ Comprehensive integration test of the complete heatWave pipeline.
 Tests: Extraction → Parsing → Seeding → PDF Generation
 """
 from pathlib import Path
-from src.parser.extractor import extract_text_from_pdf, parse_events_from_text
+from src.parser.extractor import parse_pdf_via_spatial_engine, parse_events_from_text
 from src.seeding.seeder import seed_event, format_heat_sheet
 from src.core.pdf_generator import generate_heat_sheet_pdf, generate_full_meet_pdf
 
@@ -15,23 +15,15 @@ def test_complete_pipeline():
     print("INTEGRATION TEST: Complete heatWave Pipeline")
     print("=" * 100)
     
-    # Test 1: PDF Extraction
-    print("\n✓ TEST 1: PDF Text Extraction")
+    # Test 1: PDF Extraction & Spatial Parsing
+    print("\n✓ TEST 1: PDF Spatial Extraction & Event Parsing")
     pdf_path = "data/samples/1769543968773-7a7qa8q6s.pdf"
     assert Path(pdf_path).exists(), f"Sample PDF not found: {pdf_path}"
     
-    text = extract_text_from_pdf(pdf_path)
-    assert len(text) > 45000, f"Extracted text too short: {len(text)} chars"
-    assert "Event" in text, "Event text not found in extraction"
-    assert "Seed Time" in text or "Time" in text, "Seed time data not found"
-    print("  ✓ Two-column PDF extraction works")
-    print(f"  ✓ Extracted {len(text):,} characters")
-    
-    # Test 2: Event Parsing
-    print("\n✓ TEST 2: Event and Entry Parsing")
-    events, _val = parse_events_from_text(text)
+    events, validation = parse_pdf_via_spatial_engine(pdf_path)
     assert len(events) > 0, "No events parsed"
     assert len(events) >= 28, f"Expected at least 28 events, got {len(events)}"
+    print(f"  ✓ Spatial extraction & parsing succeeded: {len(events)} events extracted")
     
     # Verify event structure
     for event in events[:3]:
@@ -171,14 +163,13 @@ def test_complete_pipeline():
     print("  ✓ Lane distribution optimal (7.0 per heat avg)")
     
     print("\n" + "=" * 100)
-    return True
+    # Return None — pytest functions must not return values
 
 
 if __name__ == "__main__":
     try:
-        success = test_complete_pipeline()
-        if success:
-            print("\n✓ Integration test completed successfully!")
+        test_complete_pipeline()
+        print("\n✅ Integration pipeline complete.")
     except AssertionError as e:
         print(f"\n✗ Test failed: {e}")
         exit(1)
