@@ -395,7 +395,7 @@ def main():
     process_cli_pdf_if_present()
     events = st.session_state.events
 
-    # Sidebar — About & Privacy-Safe Update Checker
+    # Sidebar — About, Updates & Tips Footer
     with st.sidebar:
         st.markdown("### ℹ️ About & Updates")
         st.markdown(f"**heatWave Desktop v{__version__}**")
@@ -409,18 +409,35 @@ def main():
 
         upd = st.session_state.get("update_check_result")
         if upd:
-            if upd.get("error"):
-                st.warning(f"⚠️ {upd['error']}")
-            elif upd.get("update_available"):
-                st.info(f"🎉 **v{upd['latest_version']}** is available!")
-                notes = upd.get("release_notes", "")
-                if notes:
-                    with st.expander("Release Notes"):
-                        st.markdown(notes[:500] + ("..." if len(notes) > 500 else ""))
-                url = upd.get("download_url", "https://github.com/EcstaticTech641/heatWave/releases")
-                st.markdown(f"[👉 Download Update on GitHub]({url})")
-            else:
-                st.success(f"✅ Running latest version (v{__version__}).")
+            col_upd, col_close = st.columns([0.82, 0.18])
+            with col_close:
+                if st.button("✖", key="btn_dismiss_update", help="Dismiss update notification"):
+                    st.session_state.update_check_result = None
+                    st.rerun()
+            with col_upd:
+                if upd.get("error"):
+                    st.warning(f"⚠️ {upd['error']}")
+                elif upd.get("update_available"):
+                    st.info(f"🎉 **v{upd['latest_version']}** is available!")
+                    notes = upd.get("release_notes", "")
+                    if notes:
+                        with st.expander("Release Notes"):
+                            st.markdown(notes[:500] + ("..." if len(notes) > 500 else ""))
+                    url = upd.get("download_url", "https://github.com/EcstaticTech641/heatWave/releases")
+                    st.markdown(f"[👉 Download Update on GitHub]({url})")
+                else:
+                    st.success(f"✅ Running latest version (v{__version__}).")
+
+        st.markdown("---")
+        with st.expander("💡 Tips & Quick Guide"):
+            st.markdown("""
+            1. Upload a USA Swimming psych sheet PDF
+            2. Check preview to verify parsing
+            3. Customize settings (meet name, date, lanes, timeline gap)
+            4. Generate heat sheets — estimated meet duration is shown automatically
+            5. Use Find Swimmer to look up athlete heat, lane, and start time
+            6. Download as PDF for printing at meets
+            """)
 
     # Header
     st.markdown('<div class="main-header"> heatWave</div>', unsafe_allow_html=True)
@@ -1243,15 +1260,6 @@ def main():
     # FOOTER
     # ========================================================================
     st.markdown("---")
-    with st.expander("💡 Tips"):
-        st.markdown("""
-        1. Upload a USA Swimming psych sheet PDF
-        2. Check the preview to verify parsing
-        3. Customize settings (meet name, date, lanes, timeline gap)
-        4. Generate heat sheets — estimated meet duration is shown automatically
-        5. Use Find Swimmer to look up any athlete's heat, lane, and start time
-        6. Download as PDF for printing at meets
-        """)
 
 
 if __name__ == "__main__":
