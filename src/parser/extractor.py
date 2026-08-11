@@ -3,7 +3,7 @@ import os
 import re
 from typing import List, Tuple
 import pdfplumber
-from ..models.schemas import Event, Entry, RelayEntry, Swimmer, ValidationResult
+from ..models.schemas import Event, Entry, RelayEntry, Swimmer, ValidationResult, ParseResult
 from .validator import validate_parsed_events
 
 # Regular Expressions for parsing variants
@@ -329,7 +329,7 @@ def parse_pdf_via_spatial_engine(
         event.auto_layout_failed = auto_layout_failed
 
     validation = validate_parsed_events(events, pdf_producer=pdf_producer)
-    return events, validation
+    return ParseResult(events=events, validation=validation, pdf_producer=pdf_producer)
 
 
 
@@ -806,10 +806,9 @@ class ParserFactory:
             return GenericParser()
 
 
-def parse_events_from_text(text: str) -> tuple[List[Event], ValidationResult]:
+def parse_events_from_text(text: str) -> ParseResult:
     """Top-level functional interface used by the Streamlit application pipeline."""
     parser = ParserFactory.get_parser(text)
     events = parser.parse(text)
     validation = validate_parsed_events(events)
-    return events, validation
-
+    return ParseResult(events=events, validation=validation)

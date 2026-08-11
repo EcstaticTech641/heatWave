@@ -21,6 +21,11 @@ def _parse_time_to_seconds(time_str: str) -> float | None:
 def validate_parsed_events(events: List[Event], pdf_producer: str | None = None) -> ValidationResult:
     """Runs automated validation and sanity checks on extracted Event objects.
 
+    Diagnostic Heuristic:
+        When 2+ validation checks fail concurrently on an event (e.g., High Entry Count +
+        Time Format Errors + Name Integrity Drops), treat the failure as a Parser Extraction
+        Defect (such as column bleeding) rather than validator over-sensitivity.
+
     Args:
         events: List of Event objects parsed from psych sheet.
         pdf_producer: Optional PDF Creator/Producer metadata string.

@@ -131,3 +131,47 @@ Name Age Team Seed Time
     assert max(places) == 30
     assert 2025 not in places
 
+
+def test_large_event_extraction():
+    """Verify that a large event with 120+ entries parses cleanly without column bleeding or entry loss."""
+    from src.parser.extractor import HyTekParser
+
+    header = "Event 5 Girls 11-12 50 Yard Freestyle\n"
+    # Build 125 anonymized entry lines
+    lines = [
+        f"{i} Swimmer, Athlete{i} {11 + (i % 2)} Team A-OK {25.00 + (i * 0.10):.2f}"
+        for i in range(1, 126)
+    ]
+    raw_text = header + "\n".join(lines)
+
+    parser = HyTekParser()
+    events = parser.parse(raw_text)
+
+    assert len(events) == 1
+    event = events[0]
+    assert event.number == 5
+    assert len(event.entries) == 125
+    assert event.entries[0].place == 1
+    assert event.entries[0].swimmer.name == "Swimmer, Athlete1"
+    assert event.entries[124].place == 125
+    assert event.entries[124].swimmer.name == "Swimmer, Athlete125"
+
+
+def test_time_suffix_normalization():
+    """Verify seed time normalization handles Y, L, S, B, A, X suffixes and course prefixes."""
+    from src.parser.extractor import normalize_seed_time, parse_individual_entry
+
+    assert normalize_seed_time("27.45Y") == "27.45"
+    assert normalize_seed_time("27.45 L") == "27.45"
+    assert normalize_seed_time("A 27.45") == "27.45"
+    assert normalize_seed_time("B 1:02.15 Y") == "1:02.15"
+
+    # Test via parse_individual_entry
+    res1 = parse_individual_entry("1 Doe, John 10 Team A-OK 27.45Y")
+    assert res1 is not None
+    assert res1[4] == "27.45"
+
+    res2 = parse_individual_entry("2 Smith, Jane 10 Team B-OK 27.45 L")
+    assert res2 is not None
+    assert res2[4] == "27.45"
+

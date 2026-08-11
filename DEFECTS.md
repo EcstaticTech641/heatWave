@@ -1,6 +1,6 @@
 # heatWave Known Defects & Format Scope Boundaries
 
-This document formalizes supported psych sheet format boundaries, documented limitations, and tracked defect logs for **heatWave** (v1.3.1).
+This document formalizes supported psych sheet format boundaries, documented limitations, and tracked defect logs for **heatWave** (v1.3.2).
 
 ---
 
@@ -16,7 +16,7 @@ This document formalizes supported psych sheet format boundaries, documented lim
 ### Relay Event Parsing Boundary
 
 - **Relay team entries are parsed and seeded** using Team Name, Relay Letter (A/B/C), and Entry Time.
-- **Relay Leg Swimmers:** Individual relay leg athlete names are **not extracted** in v1.3.1. Multi-line relay leg blocks (listing individual swimmer splits) are parsed at the structural level only; the `RelayEntry.swimmers` field is reserved for a future release (post-v1.4.0).
+- **Relay Leg Swimmers:** Individual relay leg athlete names are **not extracted** in v1.3.2. Multi-line relay leg blocks (listing individual swimmer splits) are parsed at the structural level only; the `RelayEntry.swimmers` field is reserved for a future release (post-v1.4.0).
 - **Rationale:** Relay leg name formatting varies across Hy-Tek versions and multi-column layouts. Relay seeding is strictly time-based and does not require individual leg names.
 
 ---
@@ -58,3 +58,10 @@ This document formalizes supported psych sheet format boundaries, documented lim
 | `extract_text_from_pdf` | `src/parser/extractor.py` | Retained | Legacy text extraction pipeline fallback used by CLI scripts & tests. |
 | `format_heat_sheet` | `src/seeding/seeder.py` | Retained | Plain-text terminal heat sheet formatter used by CLI tools & diagnostics. |
 | `GenericParser` | `src/parser/extractor.py` | Retained | Safe default fallback returned by `ParserFactory` when format detection is ambiguous. |
+
+---
+
+## 5. Diagnostic Heuristics
+
+- **Multi-Check Diagnostic Heuristic:**
+  When 2+ validation checks fail concurrently on an event (e.g., High Entry Count + Time Format Errors + Name Integrity Drops), treat the failure as a Parser Extraction Defect (such as column bleeding) rather than validator over-sensitivity.

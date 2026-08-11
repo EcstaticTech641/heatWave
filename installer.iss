@@ -1,10 +1,12 @@
 [Setup]
 AppName=heatWave
-AppVersion=1.3.1
+AppVersion=1.3.2
+AppPublisher=Antigravity Tech
+AppPublisherURL=https://github.com/EcstaticTech641/heatWave
 DefaultDirName={autopf}\heatWave
 DefaultGroupName=heatWave
 OutputDir=dist
-OutputBaseFilename=heatWave_v1.3.1_setup
+OutputBaseFilename=heatWave_v1.3.2_setup
 Compression=lzma2
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64

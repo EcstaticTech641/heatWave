@@ -29,14 +29,14 @@ def parse_version_tuple(version_str: str) -> Tuple[int, ...]:
     return tuple(parts)
 
 
-def check_for_updates(current_version: str = "1.3.0") -> Dict[str, Any]:
+def check_for_updates(current_version: str = "1.3.2") -> Dict[str, Any]:
     """
     Manually check GitHub Releases API for newer heatWave releases.
 
     This function is 100% user-initiated and transmits zero telemetry or device IDs.
 
     Args:
-        current_version: Current version of the heatWave application (e.g. "1.3.0").
+        current_version: Current version of the heatWave application (e.g. "1.3.2").
 
     Returns:
         Dict containing:
