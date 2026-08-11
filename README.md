@@ -121,10 +121,18 @@ heatWave/
 
 ---
 
+## Disclaimer & Privacy
+
+- **100% Offline & Private**: Zero data collected, stored, or uploaded. All processing runs locally on your host machine.
+- **Unofficial Utility**: Independent personal project; not affiliated with, sponsored by, or endorsed by USA Swimming, NCAA, Hy-Tek, or TeamUnify.
+- **Full Notice**: For complete details on privacy, non-affiliation, and rules compliance, see [PRIVACY_AND_DISCLAIMERS.md](docs/PRIVACY_AND_DISCLAIMERS.md).
+
+---
+
 ## License & Credits
 
 **Project:** heatWave  
-**Version:** 1.1.4  
+**Version:** 1.2.0  
 **Last Updated:** August 2026  
 **License:** See [LICENSE](LICENSE)  
 

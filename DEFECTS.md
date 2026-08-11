@@ -1,6 +1,6 @@
 # heatWave Known Defects & Format Scope Boundaries
 
-This document formalizes supported psych sheet format boundaries, documented limitations, and tracked defect logs for **heatWave** (v1.1.4).
+This document formalizes supported psych sheet format boundaries, documented limitations, and tracked defect logs for **heatWave** (v1.2.0).
 
 ---
 

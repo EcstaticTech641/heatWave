@@ -19,9 +19,24 @@ import time
 import urllib.request
 import webview
 
-APP_VERSION = "1.1.4"
+APP_VERSION = "1.2.0"
 DEFAULT_PORT = 8501
 MAX_WAIT_SECONDS = 30  # maximum time to wait for Streamlit to start
+
+
+def get_windows_theme() -> str:
+    """Detect Windows system color theme (light vs dark) using winreg."""
+    try:
+        import winreg
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+        )
+        value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
+        winreg.CloseKey(key)
+        return "light" if value == 1 else "dark"
+    except Exception:
+        return "light"
 
 
 def _resolve_paths():
@@ -91,6 +106,15 @@ def _start_streamlit(app_path: str, port: int):
 
 def main():
     _resolve_paths()
+
+    # --- CLI PDF Ingestion ---
+    if len(sys.argv) > 1:
+        candidate = sys.argv[1]
+        if os.path.isfile(candidate) and candidate.lower().endswith(".pdf"):
+            os.environ["HEATWAVE_CLI_PDF"] = os.path.abspath(candidate)
+
+    # --- Windows Dark Mode Auto-Sync ---
+    os.environ["STREAMLIT_THEME_BASE"] = get_windows_theme()
 
     # Resolve the path to the Streamlit UI script
     if getattr(sys, 'frozen', False):

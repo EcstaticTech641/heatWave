@@ -180,6 +180,7 @@ def initialize_session_state():
         # Phase 6 — spatial layout flags
         "auto_layout_failed": False,  # True when histogram produced no usable boundaries
         "pdf_bytes_for_retry": None,  # Raw uploaded bytes kept in memory for column override retry
+        "cli_pdf_processed": False,
     }
     for key, val in defaults.items():
         if key not in st.session_state:
@@ -191,6 +192,27 @@ def initialize_session_state():
             check_interval_minutes=5,
             max_age_hours=1,
         )
+
+
+def process_cli_pdf_if_present():
+    """Check if HEATWAVE_CLI_PDF is set in environment and auto-load PDF on startup."""
+    cli_path = os.environ.get("HEATWAVE_CLI_PDF")
+    if cli_path and not st.session_state.get("cli_pdf_processed", False):
+        st.session_state["cli_pdf_processed"] = True
+        path_obj = Path(cli_path)
+        if path_obj.exists() and path_obj.is_file():
+            try:
+                raw_bytes = path_obj.read_bytes()
+                st.session_state.pdf_bytes_for_retry = raw_bytes
+                events, validation = parse_pdf_via_spatial_engine(str(path_obj))
+                if events:
+                    st.session_state.events = events
+                    st.session_state.validation_result = validation
+                    st.session_state.override_proceed = False
+                    st.session_state.pdf_uploaded = True
+                    st.session_state.auto_layout_failed = any(e.auto_layout_failed for e in events)
+            except Exception as e:
+                st.error(f"Error loading CLI PDF ({cli_path}): {e}")
 
 
 
@@ -367,6 +389,7 @@ def generate_pdfs(heat_sheets, meet_title, meet_date, num_lanes, timeline=None):
 # ============================================================================
 def main():
     initialize_session_state()
+    process_cli_pdf_if_present()
     events = st.session_state.events
 
     # Header

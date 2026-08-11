@@ -8,7 +8,10 @@ env/
 .pytest_cache/
 data/samples/*
 !data/samples/.gitkeep
+# Build artifacts and release archives
 dist/
+dist/*.zip
+dist/*.exe
 build/
 *.spec
 *.log
