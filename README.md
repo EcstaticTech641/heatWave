@@ -53,7 +53,7 @@ See [DEFECTS.md](DEFECTS.md) for detailed format boundaries, defect logs, and kn
 ### Setup & Local Development
 ```bash
 # Clone the repository
-git clone https://github.com/EcstaticTech641/heatWave.git
+git clone https://github.com/EcstaticTech/heatWave.git
 cd heatWave
 
 # Set up virtual environment

@@ -148,7 +148,7 @@ def test_updater_mock_release_payload():
     payload = {
         "tag_name": "v1.4.0",
         "body": "Phase 2 feature updates and deck optimizations.",
-        "html_url": "https://github.com/EcstaticTech641/heatWave/releases/tag/v1.4.0",
+        "html_url": "https://github.com/EcstaticTech/heatWave/releases/tag/v1.4.0",
     }
     raw_json = json.dumps(payload).encode("utf-8")
 
@@ -168,7 +168,7 @@ def test_updater_mock_release_payload():
 
         # Verify request parameters
         req_arg = mock_urlopen.call_args[0][0]
-        assert req_arg.full_url == "https://api.github.com/repos/EcstaticTech641/heatWave/releases/latest"
+        assert req_arg.full_url == "https://api.github.com/repos/EcstaticTech/heatWave/releases/latest"
         assert req_arg.headers.get("User-agent") == "heatWave-Desktop/1.3.0"
 
 
@@ -177,7 +177,7 @@ def test_updater_same_version_no_update():
     payload = {
         "tag_name": "v1.3.0",
         "body": "v1.3.0 release",
-        "html_url": "https://github.com/EcstaticTech641/heatWave/releases/tag/v1.3.0",
+        "html_url": "https://github.com/EcstaticTech/heatWave/releases/tag/v1.3.0",
     }
     raw_json = json.dumps(payload).encode("utf-8")
 
@@ -216,7 +216,7 @@ def test_updater_privacy_zero_telemetry():
 
         req = mock_urlopen.call_args[0][0]
         # Assert clean GET with no query parameters
-        assert req.get_full_url() == "https://api.github.com/repos/EcstaticTech641/heatWave/releases/latest"
+        assert req.get_full_url() == "https://api.github.com/repos/EcstaticTech/heatWave/releases/latest"
         assert req.data is None
         # Verify strict user-agent
         assert req.headers.get("User-agent") == "heatWave-Desktop/1.3.0"

@@ -1,8 +1,8 @@
 [Setup]
 AppName=heatWave
 AppVersion=1.3.2
-AppPublisher=Antigravity Tech
-AppPublisherURL=https://github.com/EcstaticTech641/heatWave
+AppPublisher=ronlab
+AppPublisherURL=https://github.com/EcstaticTech/heatWave
 DefaultDirName={autopf}\heatWave
 DefaultGroupName=heatWave
 OutputDir=dist

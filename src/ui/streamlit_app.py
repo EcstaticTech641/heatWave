@@ -423,7 +423,7 @@ def main():
                     if notes:
                         with st.expander("Release Notes"):
                             st.markdown(notes[:500] + ("..." if len(notes) > 500 else ""))
-                    url = upd.get("download_url", "https://github.com/EcstaticTech641/heatWave/releases")
+                    url = upd.get("download_url", "https://github.com/EcstaticTech/heatWave/releases")
                     st.markdown(f"[👉 Download Update on GitHub]({url})")
                 else:
                     st.success(f"✅ Running latest version (v{__version__}).")

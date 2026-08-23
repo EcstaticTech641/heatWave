@@ -13,7 +13,7 @@ from typing import Tuple, Dict, Any
 
 logger = logging.getLogger(__name__)
 
-GITHUB_RELEASES_API = "https://api.github.com/repos/EcstaticTech641/heatWave/releases/latest"
+GITHUB_RELEASES_API = "https://api.github.com/repos/EcstaticTech/heatWave/releases/latest"
 DEFAULT_TIMEOUT_SECONDS = 5
 
 
@@ -62,7 +62,7 @@ def check_for_updates(current_version: str = "1.3.2") -> Dict[str, Any]:
                     "update_available": False,
                     "latest_version": current_version,
                     "release_notes": "",
-                    "download_url": "https://github.com/EcstaticTech641/heatWave/releases",
+                    "download_url": "https://github.com/EcstaticTech/heatWave/releases",
                     "error": f"GitHub API returned HTTP status {response.status}",
                 }
 
@@ -72,7 +72,7 @@ def check_for_updates(current_version: str = "1.3.2") -> Dict[str, Any]:
             raw_tag = data.get("tag_name", "")
             latest_version = raw_tag.lstrip("v").strip() if raw_tag else current_version
             release_notes = data.get("body", "No release notes available.")
-            html_url = data.get("html_url", "https://github.com/EcstaticTech641/heatWave/releases")
+            html_url = data.get("html_url", "https://github.com/EcstaticTech/heatWave/releases")
 
             current_tuple = parse_version_tuple(current_version)
             latest_tuple = parse_version_tuple(latest_version)
@@ -93,7 +93,7 @@ def check_for_updates(current_version: str = "1.3.2") -> Dict[str, Any]:
             "update_available": False,
             "latest_version": current_version,
             "release_notes": "",
-            "download_url": "https://github.com/EcstaticTech641/heatWave/releases",
+            "download_url": "https://github.com/EcstaticTech/heatWave/releases",
             "error": f"HTTP {e.code}: Unable to fetch release info.",
         }
     except (urllib.error.URLError, socket.timeout) as e:
@@ -102,7 +102,7 @@ def check_for_updates(current_version: str = "1.3.2") -> Dict[str, Any]:
             "update_available": False,
             "latest_version": current_version,
             "release_notes": "",
-            "download_url": "https://github.com/EcstaticTech641/heatWave/releases",
+            "download_url": "https://github.com/EcstaticTech/heatWave/releases",
             "error": "Network timeout or offline. Unable to check for updates.",
         }
     except Exception as e:
@@ -111,6 +111,6 @@ def check_for_updates(current_version: str = "1.3.2") -> Dict[str, Any]:
             "update_available": False,
             "latest_version": current_version,
             "release_notes": "",
-            "download_url": "https://github.com/EcstaticTech641/heatWave/releases",
+            "download_url": "https://github.com/EcstaticTech/heatWave/releases",
             "error": f"Update check failed: {str(e)}",
         }
